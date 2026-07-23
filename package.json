@@ -63,7 +63,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Infinite Canvas"
+      "shortcutName": "Infinite Canvas",
+      "include": "build/installer.nsh"
     }
   },
   "dependencies": {
