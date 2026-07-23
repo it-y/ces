@@ -11,6 +11,23 @@ let tray = null;
 let backendProcess = null;
 let isQuitting = false;
 let backendPort = 3000;
+let logStream = null;
+
+function getLogPath() {
+  const dir = getProjectDir();
+  return path.join(dir, 'data', 'logs', 'backend.log');
+}
+
+function appendLog(msg) {
+  try {
+    if (!logStream) {
+      const p = getLogPath();
+      fs.mkdirSync(path.dirname(p), { recursive: true });
+      logStream = fs.createWriteStream(p, { flags: 'a', encoding: 'utf-8' });
+    }
+    logStream.write('[' + new Date().toISOString() + '] ' + msg + '\n');
+  } catch(e) {}
+}
 
 function getProjectDir() {
   if (app.isPackaged) {
@@ -82,6 +99,27 @@ function waitForBackend(port, timeout) {
   });
 }
 
+function probePython(pythonPath) {
+  return new Promise((resolve) => {
+    const p = spawn(pythonPath, ['-c', 'import uvicorn; print("ok")'], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: { ...process.env, PYTHONUNBUFFERED: '1' }
+    });
+    let out = '';
+    p.stdout.on('data', d => out += d);
+    p.stderr.on('data', d => out += d);
+    p.on('close', code => resolve(code === 0));
+  });
+}
+
+function findFreePort(startPort) {
+  return new Promise((resolve, reject) => {
+    const s = new net.Server();
+    s.listen(startPort, '127.0.0.1', () => { s.close(() => resolve(startPort)); });
+    s.on('error', () => { resolve(null); });
+  });
+}
+
 async function startBackend() {
   const pythonPath = getPythonPath();
   const dir = getProjectDir();
@@ -97,25 +135,63 @@ async function startBackend() {
     });
     if (skip === 1) { app.quit(); return; }
   }
+  const pythonOk = await probePython(pythonPath);
+  if (!pythonOk) {
+    appendLog('Python probe failed');
+    dialog.showErrorBox('Python Error',
+      'Python environment is not working.\n' +
+      'Python path: ' + pythonPath + '\n\n' +
+      'The embedded Python may be corrupted. Try reinstalling the app.');
+    app.quit();
+    return;
+  }
+  appendLog('Python probe OK');
+  const freePort = await findFreePort(backendPort);
+  if (freePort) backendPort = freePort;
+  appendLog('Using port: ' + backendPort);
   return new Promise((resolve, reject) => {
     const args = ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(backendPort)];
+    appendLog('Starting: ' + pythonPath + ' ' + args.join(' ') + ' (cwd=' + dir + ')');
     backendProcess = spawn(pythonPath, args, {
       cwd: dir,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env, PYTHONUNBUFFERED: '1' }
     });
-    backendProcess.stdout.on('data', d => { });
-    backendProcess.stderr.on('data', d => { });
+    let stderrBuf = '';
+    backendProcess.stdout.on('data', d => { appendLog('[py] ' + d.toString().trimEnd()); });
+    backendProcess.stderr.on('data', d => {
+      const text = d.toString();
+      stderrBuf += text;
+      appendLog('[py-err] ' + text.trimEnd());
+    });
     backendProcess.on('error', err => {
-      dialog.showErrorBox('Start Failed', 'Python not found. Please install Python and add to PATH.');
+      appendLog('Spawn error: ' + err.message);
+      dialog.showErrorBox('Start Failed', 'Python not found. Please install Python and add to PATH.\n\n' + err.message);
       reject(err);
     });
     backendProcess.on('close', code => {
-      if (!isQuitting) {
-        dialog.showErrorBox('Backend Error', 'Backend service exited unexpectedly (code: ' + code + ')');
+      appendLog('Process exited with code: ' + code);
+      if (!isQuitting && !resolved) {
+        const logPath = getLogPath();
+        dialog.showErrorBox('Backend Error',
+          'Backend service exited unexpectedly (code: ' + code + ').\n\n' +
+          'Last log output:\n' + (stderrBuf.slice(-500) || '(no output)') + '\n\n' +
+          'Full log: ' + logPath);
       }
     });
-    waitForBackend(backendPort, 30000).then(resolve).catch(reject);
+    let resolved = false;
+    const origResolve = resolve;
+    resolve = function(v) { resolved = true; origResolve(v); };
+    waitForBackend(backendPort, 30000).then(resolve).catch(function(err) {
+      if (!isQuitting) {
+        appendLog('Backend timeout: ' + err.message);
+        dialog.showErrorBox('Start Error',
+          'Backend did not start within 30 seconds.\n\n' +
+          'Last log output:\n' + (stderrBuf.slice(-500) || '(no output)') + '\n\n' +
+          'Full log: ' + getLogPath());
+        reject(err);
+      }
+    });
   });
 }
 
