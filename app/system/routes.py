@@ -244,6 +244,39 @@ async def api_config_token():
     }
 
 
+@router.get("/settings/github-token")
+async def api_get_github_token():
+    """返回 GitHub Token 是否存在"""
+    from ..config import SETTINGS_PATH
+    token = ""
+    try:
+        if SETTINGS_PATH.exists():
+            data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+            token = data.get("github_token", "")
+    except Exception:
+        pass
+    return {"has_token": bool(token), "token": token}
+
+
+@router.post("/settings/github-token")
+async def api_set_github_token(req: TokenRequest):
+    """保存 GitHub Token 到 settings.json"""
+    from ..config import SETTINGS_PATH
+    data = {}
+    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if SETTINGS_PATH.exists():
+        data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    data["github_token"] = req.token
+    import tempfile, os
+    tmp = SETTINGS_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    os.replace(str(tmp), str(SETTINGS_PATH))
+    # 清除缓存
+    from .updater import _GITHUB_AUTH_CACHE
+    _GITHUB_AUTH_CACHE.pop("headers", None)
+    return {"ok": True}
+
+
 @router.get("/queue_status")
 async def api_queue_status(client_id: str = ""):
     """生成队列状态（前端高频轮询）"""
@@ -438,17 +471,19 @@ async def api_probe_async(req: dict):
 @router.post("/update-connectivity")
 async def api_update_connectivity(req: dict):
     from ..config import GITHUB_VERSION_URL, MODELSCOPE_VERSION_URL
+    from .updater import _github_auth_headers
 
-    async def _probe(url: str) -> bool:
+    async def _probe(label: str, url: str) -> bool:
         try:
+            headers = _github_auth_headers() if label == "github" else {}
             async with create_client("quick") as client:
-                resp = await client.head(url, timeout=5)
+                resp = await client.head(url, headers=headers, timeout=5)
                 return resp.status_code < 500
         except Exception:
             return False
 
     github, modelscope = await asyncio.gather(
-        _probe(GITHUB_VERSION_URL), _probe(MODELSCOPE_VERSION_URL),
+        _probe("github", GITHUB_VERSION_URL), _probe("modelscope", MODELSCOPE_VERSION_URL),
     )
     return {"github": github, "modelscope": modelscope}
 

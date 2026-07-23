@@ -192,6 +192,22 @@ GITHUB_VERSION_URL = f"{GITHUB_RAW_ROOT}/VERSION"
 GITHUB_TREE_URL = "https://api.github.com/repos/it-y/ces/git/trees/main?recursive=1"
 GITHUB_UPDATE_NOTES_URL = f"{GITHUB_RAW_ROOT}/static/update-notes.json"
 
+GITHUB_TOKEN = ""
+
+def load_github_token() -> str:
+    token = os.getenv("GITHUB_TOKEN", "")
+    if not token:
+        try:
+            sp = SETTINGS_PATH
+            if sp.exists():
+                data = json.loads(sp.read_text(encoding="utf-8"))
+                token = data.get("github_token", "")
+        except Exception:
+            pass
+    global GITHUB_TOKEN
+    GITHUB_TOKEN = token
+    return token
+
 MODELSCOPE_REPO_URL = ""
 MODELSCOPE_RAW_ROOT = ""
 MODELSCOPE_FILE_API_ROOT = ""
@@ -204,7 +220,7 @@ MODELSCOPE_TREE_URL = ""
 # ============================================================
 
 PROJECT_NAME = "Infinite Canvas (AI Studio)"
-APP_VERSION = "2026.07.23.6"
+APP_VERSION = "2026.07.23.7"
 
 
 # ============================================================

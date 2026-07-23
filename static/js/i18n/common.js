@@ -35,6 +35,7 @@
         "bulk.noSelection": { zh: "请先选择要删除的图片", en: "Select images to delete first" },
         "common.settings": { zh: "设置", en: "Settings" },
         "common.about": { zh: "关于", en: "About" },
-        "common.appDesc": { zh: "AI 绘画工作流管理工具", en: "AI Painting Workflow Manager" }
+        "common.appDesc": { zh: "AI 绘画工作流管理工具", en: "AI Painting Workflow Manager" },
+        "common.githubTokenLabel": { zh: "GitHub Token（私有仓库更新用）", en: "GitHub Token (for private repo updates)" }
     });
 })();

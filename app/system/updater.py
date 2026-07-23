@@ -16,7 +16,7 @@ from ..config import (
     BASE_DIR, DATA_DIR,
     GITHUB_VERSION_URL, GITHUB_TREE_URL, GITHUB_RAW_ROOT,
     MODELSCOPE_VERSION_URL, MODELSCOPE_TREE_URL, MODELSCOPE_FILE_API_ROOT,
-    current_app_version,
+    current_app_version, load_github_token,
 )
 from ..core.http_client import create_client
 
@@ -32,6 +32,15 @@ EXCLUDED_PREFIXES = {
 }
 
 _UNSAFE_PATH_RE = re.compile(r"(\.\.|^/|^[A-Za-z]:[\\/]|\\\\|^\.)")
+
+_GITHUB_AUTH_CACHE: dict = {}
+def _github_auth_headers() -> dict:
+    if "headers" not in _GITHUB_AUTH_CACHE:
+        token = load_github_token()
+        _GITHUB_AUTH_CACHE["headers"] = (
+            {"Authorization": f"Bearer {token}"} if token else {}
+        )
+    return _GITHUB_AUTH_CACHE["headers"]
 
 
 def _is_safe_relative_path(path: str) -> bool:
@@ -63,8 +72,9 @@ async def check_update() -> dict:
     """并发检查 GitHub + ModelScope，返回最高版本信息"""
     async def probe(label: str, url: str) -> dict | None:
         try:
+            headers = _github_auth_headers() if label == "github" else {}
             async with create_client("quick") as client:
-                resp = await client.get(url)
+                resp = await client.get(url, headers=headers)
                 if resp.status_code == 200:
                     version = resp.text.strip().splitlines()[0].strip()
                     return {"source": label, "version": version}
@@ -146,8 +156,9 @@ async def _do_download(source: str) -> Path:
 
 
 async def _fetch_github_file_list() -> list[str]:
+    headers = _github_auth_headers()
     async with create_client("normal") as client:
-        resp = await client.get(GITHUB_TREE_URL)
+        resp = await client.get(GITHUB_TREE_URL, headers=headers)
         if resp.status_code != 200:
             raise RuntimeError(f"GitHub tree returned {resp.status_code}")
         data = resp.json()
@@ -169,10 +180,12 @@ async def _fetch_modelscope_file_list() -> list[str]:
 
 
 async def _download_files(source: str, files: list[str], staging: Path):
+    gh_headers = _github_auth_headers() if source == "github" else {}
+
     async def download_one(path: str):
         url = f"{GITHUB_RAW_ROOT}/{path}" if source == "github" else f"{MODELSCOPE_FILE_API_ROOT}{path}"
         async with create_client("normal") as client:
-            resp = await client.get(url)
+            resp = await client.get(url, headers=gh_headers)
             if resp.status_code != 200:
                 raise RuntimeError(f"Download failed ({resp.status_code}): {path}")
             dest = staging / path
