@@ -1,0 +1,9 @@
+node_modules/
+dist-electron/
+python/
+data/
+*.pyc
+__pycache__/
+.deps_installed
+*.egg-info/
+.env
