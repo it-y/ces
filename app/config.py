@@ -186,25 +186,25 @@ MODELSCOPE_CHAT_MODELS = MODELSCOPE_DEFAULT_CHAT_MODELS
 # GitHub / ModelScope 更新 URL
 # ============================================================
 
-GITHUB_REPO_URL = "https://github.com/hero8152/Infinite-Canvas"
-GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main"
+GITHUB_REPO_URL = "https://github.com/it-y/ces"
+GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/it-y/ces/main"
 GITHUB_VERSION_URL = f"{GITHUB_RAW_ROOT}/VERSION"
-GITHUB_TREE_URL = "https://api.github.com/repos/hero8152/Infinite-Canvas/git/trees/main?recursive=1"
+GITHUB_TREE_URL = "https://api.github.com/repos/it-y/ces/git/trees/main?recursive=1"
 GITHUB_UPDATE_NOTES_URL = f"{GITHUB_RAW_ROOT}/static/update-notes.json"
 
-MODELSCOPE_REPO_URL = "https://modelscope.ai/studios/daniel8152/Infinite-Canvas"
-MODELSCOPE_RAW_ROOT = "https://www.modelscope.ai/studios/daniel8152/Infinite-Canvas/raw/main"
-MODELSCOPE_FILE_API_ROOT = "https://www.modelscope.ai/api/v1/studio/daniel8152/Infinite-Canvas/repo?Revision=master&FilePath="
-MODELSCOPE_VERSION_URL = f"{MODELSCOPE_FILE_API_ROOT}VERSION"
-MODELSCOPE_UPDATE_NOTES_URL = f"{MODELSCOPE_FILE_API_ROOT}static/update-notes.json"
-MODELSCOPE_TREE_URL = "https://www.modelscope.ai/api/v1/studio/daniel8152/Infinite-Canvas/repo/files?Revision=master&Recursive=true"
+MODELSCOPE_REPO_URL = ""
+MODELSCOPE_RAW_ROOT = ""
+MODELSCOPE_FILE_API_ROOT = ""
+MODELSCOPE_VERSION_URL = ""
+MODELSCOPE_UPDATE_NOTES_URL = ""
+MODELSCOPE_TREE_URL = ""
 
 # ============================================================
 # 应用信息
 # ============================================================
 
 PROJECT_NAME = "Infinite Canvas (AI Studio)"
-APP_VERSION = "2026.07.09"
+APP_VERSION = "2026.07.23.4"
 
 
 # ============================================================

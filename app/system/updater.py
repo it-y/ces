@@ -88,9 +88,8 @@ async def check_update() -> dict:
 
     return {
         "current": current,
-        "latest": latest,
-        "has_update": latest != current,
-        "source": source,
+        "has_update": latest != current and source is not None,
+        "latest": {"version": latest, "source": source} if source else None,
     }
 
 
@@ -264,6 +263,8 @@ async def apply_update(staging_path: Path) -> dict:
                 "backup_id": backup_id,
                 "files_installed": len(installed),
                 "version": version,
+                "count": len(installed),
+                "restart_scheduled": True,
             }
 
         except BaseException:
