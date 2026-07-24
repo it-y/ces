@@ -212,6 +212,12 @@ async def health_check():
     return {"status": "healthy", "version": current_app_version()}
 
 
+@app.get("/api/version-debug")
+async def version_debug():
+    from .config import _get_version_debug
+    return _get_version_debug()
+
+
 # 注册功能模块路由
 from .canvas.routes import router as canvas_router
 app.include_router(canvas_router)

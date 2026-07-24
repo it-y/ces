@@ -240,6 +240,28 @@ def current_app_version() -> str:
     return APP_VERSION
 
 
+def _get_version_debug() -> dict:
+    """返回版本调试信息"""
+    import os
+    info = {
+        "returned": current_app_version(),
+        "version_file": str(VERSION_FILE),
+        "version_file_exists": VERSION_FILE.exists(),
+        "app_version_fallback": APP_VERSION,
+        "base_dir": str(BASE_DIR),
+    }
+    if VERSION_FILE.exists():
+        try:
+            info["version_file_content"] = VERSION_FILE.read_text(encoding="utf-8").strip()
+        except Exception as e:
+            info["version_file_error"] = str(e)
+    try:
+        info["cwd"] = os.getcwd()
+    except Exception:
+        pass
+    return info
+
+
 def ensure_directories() -> None:
     """启动时创建所有需要的目录"""
     dirs = [
