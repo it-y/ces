@@ -40,7 +40,11 @@ async function importCanvasFile(file){
         else setStatus(L('已导入','Imported'));
         await loadAll();
         refreshIcons();
-    } catch(e){ console.error(e); setStatus(L('导入失败','Import failed')); }
+    } catch(e){
+        console.error(e);
+        const msg = e?.message || '';
+        setStatus((L('导入失败: ','Import failed: ')) + msg);
+    }
 }
 let _iconRaf = null;
 function refreshIcons(){
