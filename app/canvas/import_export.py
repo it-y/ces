@@ -58,24 +58,48 @@ def _parse_canvas_zip(raw: bytes) -> tuple[dict, list[tuple[str, str, bytes]]]:
     try:
         with zipfile.ZipFile(io.BytesIO(raw)) as archive:
             members = _validate_archive(archive)
-            if "canvas.json" not in members:
-                raise HTTPException(400, "ZIP 中没有 canvas.json")
-            data = _read_json_bytes(archive.read(members["canvas.json"]), "canvas.json 不是有效的画布文件")
-            resources: list[tuple[str, str, bytes]] = []
-            manifest_info = members.get("resources-manifest.json")
-            if manifest_info:
-                manifest = _read_json_bytes(archive.read(manifest_info), "资源清单格式错误")
-                entries = manifest.get("resources", [])
-                if not isinstance(entries, list) or len(entries) > MAX_ARCHIVE_ENTRIES:
-                    raise HTTPException(400, "资源清单格式错误")
-                for entry in entries:
-                    if not isinstance(entry, dict):
+
+            # Format 1: canvas.json + resources-manifest.json
+            if "canvas.json" in members:
+                data = _read_json_bytes(archive.read(members["canvas.json"]), "canvas.json 不是有效的画布文件")
+                resources: list[tuple[str, str, bytes]] = []
+                manifest_info = members.get("resources-manifest.json")
+                if manifest_info:
+                    manifest = _read_json_bytes(archive.read(manifest_info), "资源清单格式错误")
+                    entries = manifest.get("resources", [])
+                    if not isinstance(entries, list) or len(entries) > MAX_ARCHIVE_ENTRIES:
                         raise HTTPException(400, "资源清单格式错误")
-                    member = str(validate_zip_member(str(entry.get("file") or "")))
-                    if member not in members:
-                        raise HTTPException(400, f"ZIP 缺少资源文件: {member}")
-                    resources.append((str(entry.get("url") or ""), member, archive.read(members[member])))
-            return data, resources
+                    for entry in entries:
+                        if not isinstance(entry, dict):
+                            raise HTTPException(400, "资源清单格式错误")
+                        member = str(validate_zip_member(str(entry.get("file") or "")))
+                        if member not in members:
+                            raise HTTPException(400, f"ZIP 缺少资源文件: {member}")
+                        resources.append((str(entry.get("url") or ""), member, archive.read(members[member])))
+                return data, resources
+
+            # Format 2: workflow.json + resources/
+            if "workflow.json" in members:
+                wf = _read_json_bytes(archive.read(members["workflow.json"]), "workflow.json 解析失败")
+                data = {
+                    "id": wf.get("id", "imported"),
+                    "nodes": wf.get("nodes", []),
+                    "connections": wf.get("connections", []),
+                    "viewport": wf.get("viewport"),
+                    "title": wf.get("title", "未命名"),
+                }
+                resources = []
+                for entry in wf.get("resources", []):
+                    archive_path = str(entry.get("archive") or "")
+                    url = str(entry.get("url") or "")
+                    if archive_path and url and archive_path in members:
+                        member_path = validate_zip_member(archive_path)
+                        name = Path(archive_path).name
+                        content = archive.read(members[str(member_path)])
+                        resources.append((url, name, content))
+                return data, resources
+
+            raise HTTPException(400, "ZIP 中没有 canvas.json 或 workflow.json")
     except zipfile.BadZipFile as exc:
         raise HTTPException(400, "无效的 ZIP 文件") from exc
 
