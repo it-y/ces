@@ -2141,7 +2141,7 @@
                     signal:ac.signal
                 });
                 const data = await res.json().catch(() => ({}));
-                if(!res.ok) throw new Error(data.detail || (isEn ? 'Update failed' : '更新失败'));
+                if(!res.ok) throw new Error(data.detail || (isEn ? 'Update failed' : '更新失败') + (res.status ? ` (HTTP ${res.status})` : ''));
                 if(data.update_notes) setProjectUpdateNotes(data.update_notes);
                 const restarting = data.restart_scheduled;
                 const electronRelaunch = data.electron_relaunch;
@@ -2174,7 +2174,10 @@
                 const msg = (e && e.name === 'AbortError')
                     ? (isEn ? 'Update timed out. Switch source or check your network, then retry.' : '更新超时。请切换下载源或检查网络后重试。')
                     : describeNetworkError(e, isEn);
-                setUpdateSummary('fail', isEn ? 'Update failed' : '更新失败', msg);
+                const errMsg = (e && e.name === 'AbortError')
+                    ? msg
+                    : ((e && e.message) || msg);
+                setUpdateSummary('fail', isEn ? 'Update failed' : '更新失败', errMsg);
             } finally {
                 clearTimeout(killer);
                 projectUpdateRunning = false;

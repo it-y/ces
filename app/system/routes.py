@@ -181,15 +181,26 @@ async def api_check_update():
 async def api_update(req: UpdateRequest):
     if _update_lock.locked():
         raise HTTPException(409, detail="更新或回滚操作正在进行中")
-    staging = await download_update(source=req.source, fallback=req.fallback)
-    result = await apply_update(staging)
-    if req.auto_restart:
-        if is_electron():
-            result["electron_relaunch"] = True
-            result["restart_scheduled"] = False
-        else:
-            schedule_restart()
-    return result
+    try:
+        staging = await download_update(source=req.source, fallback=req.fallback)
+        result = await apply_update(staging)
+        if req.auto_restart:
+            if is_electron():
+                result["electron_relaunch"] = True
+                result["restart_scheduled"] = False
+            else:
+                schedule_restart()
+        return result
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        detail = f"{type(e).__name__}: {e}"
+        log_path = DATA_DIR / "update_error.log"
+        try:
+            log_path.write_text(f"[{__import__('time').strftime('%Y-%m-%d %H:%M:%S')}] {detail}\n{tb}\n", encoding="utf-8")
+        except Exception:
+            pass
+        raise HTTPException(500, detail=detail)
 
 
 @router.get("/update-backups")
