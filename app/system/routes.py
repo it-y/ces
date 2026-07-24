@@ -183,7 +183,7 @@ async def api_update(req: UpdateRequest):
         raise HTTPException(409, detail="更新或回滚操作正在进行中")
     try:
         staging = await download_update(source=req.source, fallback=req.fallback)
-        result = await apply_update(staging)
+        result = await apply_update(staging, declared_version=req.version)
         if req.auto_restart:
             if is_electron():
                 result["electron_relaunch"] = True

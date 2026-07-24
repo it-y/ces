@@ -9,6 +9,7 @@ class UpdateRequest(BaseModel):
     restart_delay: int = 3
     source: str = "github"
     fallback: bool = True
+    version: str | None = None
 
 
 class RollbackRequest(BaseModel):

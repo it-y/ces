@@ -2137,7 +2137,7 @@
                 const res = await fetch('/api/update-from-github', {
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
-                    body:JSON.stringify({ auto_restart:true, restart_delay:3, source:updateSource, fallback:true }),
+                    body:JSON.stringify({ auto_restart:true, restart_delay:3, source:updateSource, fallback:true, version: appInfo.latestVersion }),
                     signal:ac.signal
                 });
                 const data = await res.json().catch(() => ({}));

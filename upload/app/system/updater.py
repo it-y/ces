@@ -211,13 +211,13 @@ def _read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-async def apply_update(staging_path: Path) -> dict:
+async def apply_update(staging_path: Path, declared_version: str | None = None) -> dict:
     """安装 staging 目录的文件到 BASE_DIR，含备份和自动回滚。"""
     async with _update_lock:
         rel_files = _list_relative_files(staging_path)
         _validate_staging_has_required(staging_path)
 
-        version = _get_staging_version(staging_path)
+        version = declared_version or _get_staging_version(staging_path)
         backup_id = f"{int(time.time())}_{version}"
         backup_dir = DATA_DIR / "update" / "backups" / backup_id
         backup_files_dir = backup_dir / "files"

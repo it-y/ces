@@ -181,8 +181,8 @@ async def api_check_update():
 async def api_update(req: UpdateRequest):
     if _update_lock.locked():
         raise HTTPException(409, detail="更新或回滚操作正在进行中")
-    staging = await download_update(source=req.source, fallback=req.fallback)
-    result = await apply_update(staging)
+        staging = await download_update(source=req.source, fallback=req.fallback)
+        result = await apply_update(staging, declared_version=req.version)
     if req.auto_restart:
         schedule_restart()
     return result
