@@ -1280,6 +1280,9 @@
         }
         if(window.electronAPI?.isElectron) {
             document.getElementById('update-app-btn').style.display = '';
+            window.electronAPI.onPollCheckUpdate(function() {
+                checkForUpdates(false);
+            });
             window.electronAPI.onUpdateStatus(function(status) {
                 const btn = document.getElementById('update-app-btn');
                 const text = document.getElementById('update-app-text');

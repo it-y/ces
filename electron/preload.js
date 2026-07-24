@@ -10,5 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   installUpdate: () => ipcRenderer.invoke('install-update'),
   onUpdateStatus: (cb) => {
     ipcRenderer.on('update-status', (_, status) => cb(status));
+  },
+  onPollCheckUpdate: (cb) => {
+    ipcRenderer.on('poll-check-update', () => cb());
   }
 });

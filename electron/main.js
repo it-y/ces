@@ -12,6 +12,21 @@ let backendProcess = null;
 let isQuitting = false;
 let backendPort = 3000;
 let logStream = null;
+let updatePollTimer = null;
+
+// ========== 单实例锁 ==========
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
 
 function getLogPath() {
   const dir = getProjectDir();
@@ -114,9 +129,13 @@ function probePython(pythonPath) {
 
 function findFreePort(startPort) {
   return new Promise((resolve, reject) => {
-    const s = new net.Server();
-    s.listen(startPort, '127.0.0.1', () => { s.close(() => resolve(startPort)); });
-    s.on('error', () => { resolve(null); });
+    const tryPort = (port) => {
+      if (port > startPort + 100) return reject(new Error('No free port found'));
+      const s = new net.Server();
+      s.listen(port, '127.0.0.1', () => { s.close(() => resolve(port)); });
+      s.on('error', () => { try { s.destroy(); } catch(e) {} tryPort(port + 1); });
+    };
+    tryPort(startPort);
   });
 }
 
@@ -146,8 +165,7 @@ async function startBackend() {
     return;
   }
   appendLog('Python probe OK');
-  const freePort = await findFreePort(backendPort);
-  if (freePort) backendPort = freePort;
+  backendPort = await findFreePort(backendPort);
   appendLog('Using port: ' + backendPort);
   return new Promise((resolve, reject) => {
     const args = ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(backendPort)];
@@ -233,10 +251,23 @@ function createWindow() {
   mainWindow.loadURL('http://127.0.0.1:' + backendPort);
   mainWindow.once('ready-to-show', () => mainWindow.show());
   mainWindow.webContents.setWindowOpenHandler(({ url }) => { shell.openExternal(url); return { action: 'deny' }; });
+  // X 按钮 → 隐藏到托盘（不退出）
   mainWindow.on('close', e => { if (!isQuitting) { e.preventDefault(); mainWindow.hide(); } });
   mainWindow.on('closed', () => { mainWindow = null; });
+  // 定时检测更新（每 60 秒通知前端刷新版本状态）
+  startUpdatePoll();
 }
 
+function startUpdatePoll() {
+  if (updatePollTimer) clearInterval(updatePollTimer);
+  updatePollTimer = setInterval(() => {
+    if (mainWindow) {
+      mainWindow.webContents.send('poll-check-update');
+    }
+  }, 60000);
+}
+
+// ========== IPC ==========
 ipcMain.handle('select-folder', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory'],
@@ -252,9 +283,10 @@ ipcMain.handle('open-folder-in-explorer', async (event, folderPath) => {
   exec(`explorer "${folderPath}"`);
 });
 
-// ---- Auto Update ----
+// ========== Electron Auto Update ==========
+// 默认静默，不自动检查（没配 GitHub Releases）
 autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.autoInstallOnAppQuit = false;
 
 function sendUpdateStatus(status) {
   if (mainWindow) mainWindow.webContents.send('update-status', status);
@@ -312,7 +344,6 @@ app.whenReady().then(async () => {
     await startBackend();
     createTray();
     createWindow();
-    autoUpdater.checkForUpdatesAndNotify();
   } catch (err) {
     dialog.showErrorBox('Start Error', err.message);
     app.quit();
