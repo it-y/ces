@@ -87,7 +87,7 @@ def _parse_canvas_zip(raw: bytes) -> tuple[dict, list[tuple[str, str, bytes]]]:
                     "nodes": wf.get("nodes", []),
                     "connections": wf.get("connections", []),
                     "viewport": wf.get("viewport"),
-                    "title": wf.get("title", "未命名"),
+                    "title": wf.get("title", ""),
                 }
                 resources = []
                 for entry in wf.get("resources", []):
