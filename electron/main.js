@@ -173,7 +173,7 @@ async function startBackend() {
     backendProcess = spawn(pythonPath, args, {
       cwd: dir,
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, PYTHONUNBUFFERED: '1' }
+      env: { ...process.env, PYTHONUNBUFFERED: '1', ELECTRON_RUN: '1' }
     });
     let stderrBuf = '';
     backendProcess.stdout.on('data', d => { appendLog('[py] ' + d.toString().trimEnd()); });
@@ -337,6 +337,14 @@ ipcMain.handle('download-update', async () => {
 ipcMain.handle('install-update', async () => {
   setImmediate(() => autoUpdater.quitAndInstall());
   return { ok: true };
+});
+
+ipcMain.handle('relaunch-app', async () => {
+  appendLog('Relaunching app from update');
+  isQuitting = true;
+  stopBackend();
+  app.relaunch();
+  app.exit(0);
 });
 
 app.whenReady().then(async () => {

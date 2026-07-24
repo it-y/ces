@@ -371,8 +371,15 @@ async def rollback_update(backup_id: str) -> dict:
             raise
 
 
+def is_electron() -> bool:
+    """检测是否运行在 Electron 子进程中"""
+    return os.environ.get("ELECTRON_RUN") == "1"
+
+
 def schedule_restart() -> None:
     """跨平台重启脚本"""
+    if is_electron():
+        return
     if os.name == "nt":
         _schedule_windows_restart()
     else:

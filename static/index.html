@@ -2144,6 +2144,7 @@
                 if(!res.ok) throw new Error(data.detail || (isEn ? 'Update failed' : '更新失败'));
                 if(data.update_notes) setProjectUpdateNotes(data.update_notes);
                 const restarting = data.restart_scheduled;
+                const electronRelaunch = data.electron_relaunch;
                 const usedLabel = data.source_label || (data.source === 'modelscope' ? 'ModelScope' : 'GitHub');
                 const fallbackNote = data.fallback_used
                     ? (isEn
@@ -2164,7 +2165,11 @@
                 document.getElementById('settings-gear-btn')?.classList.remove('has-update');
                 btn?.classList.remove('show');
                 setProjectVersionBadge(data.version || appInfo.latestVersion || appInfo.version);
-                if(restarting) waitForBackendAndReload();
+                if(electronRelaunch && window.electronAPI?.relaunchApp) {
+                    setTimeout(function() { window.electronAPI.relaunchApp(); }, 2000);
+                } else if(restarting) {
+                    waitForBackendAndReload();
+                }
             } catch(e) {
                 const msg = (e && e.name === 'AbortError')
                     ? (isEn ? 'Update timed out. Switch source or check your network, then retry.' : '更新超时。请切换下载源或检查网络后重试。')
@@ -2221,7 +2226,11 @@
                 alert(isEn
                     ? `Restored ${data.count || 0} files. Backend is restarting.`
                     : `已还原 ${data.count || 0} 个文件。后端正在重启。`);
-                if(data.restart_scheduled) waitForBackendAndReload();
+                if(data.electron_relaunch && window.electronAPI?.relaunchApp) {
+                    setTimeout(function() { window.electronAPI.relaunchApp(); }, 2000);
+                } else if(data.restart_scheduled) {
+                    waitForBackendAndReload();
+                }
             } catch(e) {
                 alert((isEn ? 'Rollback failed: ' : '回滚失败：') + describeNetworkError(e, isEn));
             }

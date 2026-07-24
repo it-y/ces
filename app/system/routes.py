@@ -14,7 +14,7 @@ from .providers import (
     load_providers, save_providers, get_provider,
     public_provider, mask_secret, provider_api_key,
 )
-from .updater import check_update, download_update, apply_update, rollback_update, schedule_restart, _update_lock
+from .updater import check_update, download_update, apply_update, rollback_update, schedule_restart, _update_lock, is_electron
 from ..config import current_app_version, GITHUB_REPO_URL, MODELSCOPE_REPO_URL, DATA_DIR
 from ..core.http_client import create_client
 from ..core.websocket import manager as ws_manager
@@ -184,7 +184,11 @@ async def api_update(req: UpdateRequest):
     staging = await download_update(source=req.source, fallback=req.fallback)
     result = await apply_update(staging)
     if req.auto_restart:
-        schedule_restart()
+        if is_electron():
+            result["electron_relaunch"] = True
+            result["restart_scheduled"] = False
+        else:
+            schedule_restart()
     return result
 
 
@@ -203,7 +207,11 @@ async def api_rollback(req: RollbackRequest):
         raise HTTPException(409, detail="更新或回滚操作正在进行中")
     result = await rollback_update(req.name)
     if req.auto_restart:
-        schedule_restart()
+        if is_electron():
+            result["electron_relaunch"] = True
+            result["restart_scheduled"] = False
+        else:
+            schedule_restart()
     return result
 
 
