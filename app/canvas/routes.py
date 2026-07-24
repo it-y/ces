@@ -86,9 +86,10 @@ async def api_create_canvas(req: CanvasCreateRequest):
 
 
 @router.post("/canvases/import")
-async def api_import_canvas(file: UploadFile):
+async def api_import_canvas(file: UploadFile, project_id: str = ""):
     raw = await file.read()
-    canvas = await import_canvas_file(raw, file.filename)
+    pid = project_id.strip() or None
+    canvas = await import_canvas_file(raw, file.filename, pid)
     return {"canvas": canvas}
 
 

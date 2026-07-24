@@ -80,7 +80,7 @@ def _parse_canvas_zip(raw: bytes) -> tuple[dict, list[tuple[str, str, bytes]]]:
         raise HTTPException(400, "无效的 ZIP 文件") from exc
 
 
-async def import_canvas_file(raw: bytes, filename: str | None) -> dict:
+async def import_canvas_file(raw: bytes, filename: str | None, project_id: str | None = None) -> dict:
     if filename and filename.lower().endswith(".zip"):
         data, resources = await asyncio.to_thread(_parse_canvas_zip, raw)
     else:
@@ -88,6 +88,8 @@ async def import_canvas_file(raw: bytes, filename: str | None) -> dict:
         resources = []
     if "id" not in data:
         raise HTTPException(400, "不是有效的画布文件")
+    if project_id:
+        data["project"] = project_id
     try:
         return await import_canvas_data(data, resources)
     except ValueError as exc:

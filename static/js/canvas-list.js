@@ -33,7 +33,9 @@ async function importCanvasFile(file){
     form.append('file', file);
     setStatus(L('正在导入...','Importing...'));
     try {
-        const res = await fetch('/api/canvases/import', { method:'POST', body:form });
+        const pid = (typeof currentProjectId !== 'undefined') ? currentProjectId : '';
+        const url = '/api/canvases/import' + (pid ? '?project_id=' + encodeURIComponent(pid) : '');
+        const res = await fetch(url, { method:'POST', body:form });
         if(!res.ok){ const e=await res.json(); throw new Error(e.detail||'import failed'); }
         const data = await res.json();
         if(data.canvas) setStatus(L('已导入: ','Imported: ')+data.canvas.title);
