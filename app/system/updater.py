@@ -108,7 +108,13 @@ def _version_newer(a: str, b: str) -> bool:
     def parse(v: str) -> list[int]:
         return [int(x) for x in re.findall(r"\d+", v)]
     try:
-        return parse(a) > parse(b)
+        na = parse(a)
+        nb = parse(b)
+        min_len = min(len(na), len(nb))
+        for i in range(min_len):
+            if na[i] != nb[i]:
+                return na[i] > nb[i]
+        return len(na) > len(nb)
     except Exception:
         return a > b
 
