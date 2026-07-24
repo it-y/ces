@@ -304,6 +304,12 @@ async def apply_update(staging_path: Path) -> dict:
 
             _write_json(backup_dir / "manifest.json", manifest)
 
+            marker = DATA_DIR / ".applied_version"
+            try:
+                marker.write_text(version, encoding="utf-8")
+            except Exception:
+                pass
+
             return {
                 "ok": True,
                 "backup_id": backup_id,

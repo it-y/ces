@@ -228,16 +228,45 @@ APP_VERSION = "2026.07.23.11"
 # 辅助函数
 # ============================================================
 
+def _parse_version(v: str) -> list[int]:
+    import re
+    return [int(x) for x in re.findall(r"\d+", v)]
+
+
 def current_app_version() -> str:
     """从 VERSION 文件读取版本号，失败则返回 APP_VERSION"""
+    def newer(a: str, b: str) -> bool:
+        try:
+            na = _parse_version(a)
+            nb = _parse_version(b)
+            for i in range(min(len(na), len(nb))):
+                if na[i] != nb[i]:
+                    return na[i] > nb[i]
+            return len(na) > len(nb)
+        except Exception:
+            return a > b
+
+    candidates = []
     try:
         if VERSION_FILE.exists():
             lines = VERSION_FILE.read_text(encoding="utf-8").strip().splitlines()
             if lines and lines[0].strip():
-                return lines[0].strip()
+                candidates.append(lines[0].strip())
     except Exception:
         pass
-    return APP_VERSION
+    try:
+        marker = DATA_DIR / ".applied_version"
+        if marker.exists():
+            v = marker.read_text(encoding="utf-8").strip()
+            if v:
+                candidates.append(v)
+    except Exception:
+        pass
+    best = APP_VERSION
+    for v in candidates:
+        if newer(v, best):
+            best = v
+    return best
 
 
 def _get_version_debug() -> dict:
