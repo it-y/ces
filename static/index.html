@@ -1144,7 +1144,15 @@
                                     </svg>
                                     <span id="update-now-settings-text">一键更新</span>
                                 </button>
+                                <button id="manual-check-update-btn" class="studio-modal-btn" onclick="manualCheckUpdate()" type="button" style="display:flex">
+                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:14px;height:14px">
+                                        <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                                        <path d="M21 3v6h-6"></path>
+                                    </svg>
+                                    <span id="manual-check-update-text">检测更新</span>
+                                </button>
                             </div>
+                            <div id="manual-check-update-result" style="font-size:13px;color:var(--text-secondary);margin-top:4px;min-height:0"></div>
                             <div class="about-form-group" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border-color);width:100%;max-width:280px;text-align:left">
                                 <label class="about-form-label" data-i18n="common.githubTokenLabel">GitHub Token</label>
                                 <div class="about-form-row">
@@ -1214,6 +1222,30 @@
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.textContent = '保存';
+            }
+        }
+        async function manualCheckUpdate() {
+            const btn = document.getElementById('manual-check-update-btn');
+            const text = document.getElementById('manual-check-update-text');
+            const result = document.getElementById('manual-check-update-result');
+            if(!btn || !text) return;
+            btn.disabled = true;
+            text.textContent = '检测中…';
+            if(result) result.textContent = '';
+            try {
+                const r = await fetch('/api/check-update', { cache:'no-store' });
+                const d = await r.json();
+                if(d.latest?.version && d.latest.version !== d.current) {
+                    if(result) result.textContent = '发现新版本 ' + d.latest.version;
+                    showUpdateNotice(d.current, d.latest.version);
+                } else {
+                    if(result) result.textContent = '已是最新 (' + d.current + ')';
+                }
+            } catch(e) {
+                if(result) result.textContent = '检测失败: ' + e.message;
+            } finally {
+                btn.disabled = false;
+                text.textContent = '检测更新';
             }
         }
         async function testGithubToken() {
