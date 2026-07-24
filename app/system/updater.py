@@ -182,11 +182,21 @@ async def _do_download(source: str) -> Path:
 async def _fetch_github_file_list() -> list[str]:
     headers = _github_auth_headers()
     async with create_client("normal") as client:
+        tree_code = None
+        resp = await client.get(GITHUB_TREE_URL, headers=headers)
+        tree_code = resp.status_code
+        if resp.status_code == 200:
+            data = resp.json()
+            tree = data.get("tree", [])
+            return [item["path"] for item in tree if item.get("type") == "blob"]
         resp = await client.get(GITHUB_MANIFEST_URL, headers=headers)
-        if resp.status_code != 200:
-            raise RuntimeError(f"GitHub MANIFEST returned {resp.status_code}")
-        lines = resp.text.strip().splitlines()
-        return [l.strip() for l in lines if l.strip() and not l.strip().startswith("#")]
+        manifest_code = resp.status_code
+        if resp.status_code == 200:
+            lines = resp.text.strip().splitlines()
+            return [l.strip() for l in lines if l.strip() and not l.strip().startswith("#")]
+        raise RuntimeError(
+            f"GitHub file list unavailable: tree API={tree_code}, manifest={manifest_code}"
+        )
 
 
 async def _fetch_modelscope_file_list() -> list[str]:
