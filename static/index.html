@@ -1231,18 +1231,19 @@
             if(!btn || !text) return;
             btn.disabled = true;
             text.textContent = '检测中…';
-            if(result) result.textContent = '';
+            if(result) { result.textContent = '正在请求 /api/check-update...'; result.style.color = 'var(--text-secondary)'; }
             try {
                 const r = await fetch('/api/check-update', { cache:'no-store' });
                 const d = await r.json();
+                if(!r.ok) { if(result) { result.textContent = 'HTTP ' + r.status + ': ' + (d.detail || JSON.stringify(d)); result.style.color = '#ef4444'; } return; }
                 if(d.latest?.version && d.latest.version !== d.current) {
-                    if(result) result.textContent = '发现新版本 ' + d.latest.version;
+                    if(result) { result.textContent = '发现新版本 ' + d.latest.version + ' (当前 ' + d.current + ')'; result.style.color = '#22c55e'; }
                     showUpdateNotice(d.current, d.latest.version);
                 } else {
-                    if(result) result.textContent = '已是最新 (' + d.current + ')';
+                    if(result) { result.textContent = '已是最新 (' + d.current + ')'; result.style.color = 'var(--text-secondary)'; }
                 }
             } catch(e) {
-                if(result) result.textContent = '检测失败: ' + e.message;
+                if(result) { result.textContent = '检测失败: ' + e.message; result.style.color = '#ef4444'; }
             } finally {
                 btn.disabled = false;
                 text.textContent = '检测更新';

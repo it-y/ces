@@ -13,7 +13,7 @@ import subprocess
 import time
 from pathlib import Path
 from ..config import (
-    BASE_DIR, DATA_DIR,
+    BASE_DIR, DATA_DIR, GITHUB_REPO_URL,
     GITHUB_VERSION_URL, GITHUB_TREE_URL, GITHUB_RAW_ROOT,
     MODELSCOPE_VERSION_URL, MODELSCOPE_TREE_URL, MODELSCOPE_FILE_API_ROOT,
     current_app_version, load_github_token,
@@ -95,6 +95,23 @@ async def check_update() -> dict:
         if r and _version_newer(r["version"], latest):
             latest = r["version"]
             source = r["source"]
+
+    # 兜底：raw CDN 失败时切 GitHub API
+    if source is None:
+        try:
+            headers = _github_auth_headers()
+            api_url = GITHUB_REPO_URL.replace("https://github.com/", "https://api.github.com/repos/")
+            async with create_client("quick") as client:
+                resp = await client.get(f"{api_url}/contents/VERSION", headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    import base64
+                    version = base64.b64decode(data.get("content", "")).decode().strip().splitlines()[0].strip()
+                    if version and _version_newer(version, current):
+                        latest = version
+                        source = "github"
+        except Exception:
+            pass
 
     return {
         "current": current,
