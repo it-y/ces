@@ -191,6 +191,7 @@ GITHUB_RAW_ROOT = "https://raw.githubusercontent.com/it-y/ces/main"
 GITHUB_VERSION_URL = f"{GITHUB_RAW_ROOT}/VERSION"
 GITHUB_TREE_URL = "https://api.github.com/repos/it-y/ces/git/trees/main?recursive=1"
 GITHUB_UPDATE_NOTES_URL = f"{GITHUB_RAW_ROOT}/static/update-notes.json"
+GITHUB_MANIFEST_URL = f"{GITHUB_RAW_ROOT}/MANIFEST"
 
 GITHUB_TOKEN = ""
 

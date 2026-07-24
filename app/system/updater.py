@@ -15,6 +15,7 @@ from pathlib import Path
 from ..config import (
     BASE_DIR, DATA_DIR, GITHUB_REPO_URL,
     GITHUB_VERSION_URL, GITHUB_TREE_URL, GITHUB_RAW_ROOT,
+    GITHUB_MANIFEST_URL,
     MODELSCOPE_VERSION_URL, MODELSCOPE_TREE_URL, MODELSCOPE_FILE_API_ROOT,
     current_app_version, load_github_token,
 )
@@ -181,12 +182,11 @@ async def _do_download(source: str) -> Path:
 async def _fetch_github_file_list() -> list[str]:
     headers = _github_auth_headers()
     async with create_client("normal") as client:
-        resp = await client.get(GITHUB_TREE_URL, headers=headers)
+        resp = await client.get(GITHUB_MANIFEST_URL, headers=headers)
         if resp.status_code != 200:
-            raise RuntimeError(f"GitHub tree returned {resp.status_code}")
-        data = resp.json()
-        tree = data.get("tree", [])
-        return [item["path"] for item in tree if item.get("type") == "blob"]
+            raise RuntimeError(f"GitHub MANIFEST returned {resp.status_code}")
+        lines = resp.text.strip().splitlines()
+        return [l.strip() for l in lines if l.strip() and not l.strip().startswith("#")]
 
 
 async def _fetch_modelscope_file_list() -> list[str]:
