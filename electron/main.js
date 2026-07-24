@@ -170,10 +170,34 @@ async function startBackend() {
   return new Promise((resolve, reject) => {
     const args = ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(backendPort)];
     appendLog('Starting: ' + pythonPath + ' ' + args.join(' ') + ' (cwd=' + dir + ')');
+    const backendEnv = { ...process.env, PYTHONUNBUFFERED: '1', ELECTRON_RUN: '1' };
+    if (!backendEnv.HTTP_PROXY && !backendEnv.http_proxy) {
+      const fs = require('fs');
+      const regPath = 'C:\\Windows\\System32\\reg.exe';
+      if (fs.existsSync(regPath)) {
+        const { execSync } = require('child_process');
+        try {
+          const out = execSync(
+            `"${regPath}" query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer`,
+            { encoding: 'utf8', timeout: 3000 }
+          ).trim();
+          const m = out.match(/ProxyServer\s+REG_SZ\s+(\S+)/);
+          if (m) {
+            const proxyHost = m[1].trim();
+            const proxyUrl = proxyHost.includes('://') ? proxyHost : 'http://' + proxyHost;
+            backendEnv.HTTP_PROXY = proxyUrl;
+            backendEnv.HTTPS_PROXY = proxyUrl;
+            backendEnv.http_proxy = proxyUrl;
+            backendEnv.https_proxy = proxyUrl;
+            backendEnv.NO_PROXY = '127.0.0.1,localhost';
+          }
+        } catch(e) {}
+      }
+    }
     backendProcess = spawn(pythonPath, args, {
       cwd: dir,
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: { ...process.env, PYTHONUNBUFFERED: '1', ELECTRON_RUN: '1' }
+      env: backendEnv
     });
     let stderrBuf = '';
     backendProcess.stdout.on('data', d => { appendLog('[py] ' + d.toString().trimEnd()); });
