@@ -244,7 +244,7 @@
             height: 18px;
         }
 
-        #update-now-settings-btn.show { display: inline-flex !important; }
+        #update-now-settings-btn.show { display: flex !important; }
         .topbar-btn.has-update::after {
             content: '';
             position: absolute;
@@ -460,7 +460,7 @@
         }
 
         .settings-sidebar {
-            width:160px;
+            width:120px;
             flex-shrink:0;
             display:flex;
             flex-direction:column;
@@ -565,9 +565,15 @@
 
         .about-actions {
             display:flex;
-            align-items:center;
-            gap:8px;
-            margin-top:4px;
+            flex-direction:column;
+            align-items:stretch;
+            gap:6px;
+            margin-top:8px;
+            width:100%;
+            max-width:280px;
+        }
+        .about-actions .studio-modal-btn {
+            justify-content:center;
         }
 
         .studio-modal[hidden] {
@@ -1139,12 +1145,14 @@
                                     <span id="update-now-settings-text">一键更新</span>
                                 </button>
                             </div>
-                            <div class="about-form-group" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border-color)">
+                            <div class="about-form-group" style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border-color);width:100%;max-width:280px;text-align:left">
                                 <label class="about-form-label" data-i18n="common.githubTokenLabel">GitHub Token</label>
                                 <div class="about-form-row">
                                     <input id="github-token-input" class="about-form-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1;min-width:0">
-                                    <button id="github-token-save-btn" class="studio-modal-btn" onclick="saveGithubToken()" type="button">保存</button>
-                                    <button id="github-token-test-btn" class="studio-modal-btn" onclick="testGithubToken()" type="button">测试</button>
+                                </div>
+                                <div class="about-form-row" style="margin-top:6px">
+                                    <button id="github-token-save-btn" class="studio-modal-btn" onclick="saveGithubToken()" type="button" style="flex:1">保存</button>
+                                    <button id="github-token-test-btn" class="studio-modal-btn" onclick="testGithubToken()" type="button" style="flex:1">测试</button>
                                 </div>
                                 <div id="github-token-status" class="about-form-status" style="margin-top:6px;font-size:13px;color:var(--text-secondary)"></div>
                             </div>
