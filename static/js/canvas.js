@@ -13658,6 +13658,10 @@ function startNodeResize(e, node){
         sw:(rect?.width ? rect.width / viewport.scale : node.w || defaultNodeSize(node.type).w),
         sh:(rect?.height ? rect.height / viewport.scale : node.h || defaultNodeSize(node.type).h || 160)
     };
+    if(node.type === 'llm'){
+        resizeNode.baseInputH = Math.max(70, node.llmInputHeight || 110);
+        resizeNode.baseOutputH = Math.max(70, node.llmOutputHeight || 150);
+    }
     document.body.classList.add('canvas-node-resize');
     window.onmousemove = onNodeResize;
     window.onmouseup = endDrag;
@@ -13674,6 +13678,25 @@ function onNodeResize(e){
         el.classList.add('sized');
         el.style.width = `${resizeNode.node.w}px`;
         el.style.height = `${resizeNode.node.h}px`;
+    }
+    if(resizeNode.node.type === 'llm' && resizeNode.baseInputH && resizeNode.sh > 0){
+        const ratio = resizeNode.node.h / resizeNode.sh;
+        const nextInputH = Math.max(70, Math.round(resizeNode.baseInputH * ratio));
+        const nextOutputH = Math.max(70, Math.round(resizeNode.baseOutputH * ratio));
+        resizeNode.node.llmInputHeight = nextInputH;
+        resizeNode.node.llmOutputHeight = nextOutputH;
+        if(el){
+            const inputEl = el.querySelector('.llm-input-area');
+            if(inputEl){
+                inputEl.style.height = `${nextInputH}px`;
+                inputEl.style.flexBasis = `${nextInputH}px`;
+            }
+            const outputWrap = el.querySelector('.llm-output-wrap');
+            if(outputWrap){
+                outputWrap.style.height = `${nextOutputH}px`;
+                outputWrap.style.flexBasis = `${nextOutputH}px`;
+            }
+        }
     }
     scheduleLinksRender();
     renderSelectionHub();
