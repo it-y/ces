@@ -301,6 +301,7 @@ let zoomPreviewState = null;
 let resizeNode = null;
 let llmPaneDrag = null;
 let llmOutputDrag = null;
+let llmBlurGuard = null;
 let tempLink = null;
 let knifeActive = false;
 let knifePoint = null;
@@ -8156,6 +8157,17 @@ function bindScrollableText(el){
         if(textSelectionGuard?.el === el) textSelectionGuard.wheelUntil = Date.now() + 180;
     }, {passive:true});
 }
+function beginLLMWindowDrag(moveFn){
+    window.addEventListener('mousemove', moveFn, true);
+    window.addEventListener('mouseup', endDrag, true);
+    llmBlurGuard = () => endDrag();
+    window.addEventListener('blur', llmBlurGuard);
+}
+function llmNodeStartHeight(node){
+    const el = nodesEl.querySelector(`.node[data-id="${node.id}"]`);
+    const rect = el?.getBoundingClientRect();
+    return Math.max(96, rect ? rect.height / viewport.scale : Number(node.h) || 590);
+}
 function startLLMPaneResize(e, node){
     e.preventDefault();
     e.stopPropagation();
@@ -8163,14 +8175,14 @@ function startLLMPaneResize(e, node){
         node,
         sy:e.clientY,
         inputStart:Math.max(70, node.llmInputHeight || 110),
-        startNodeH:Math.max(96, Number(node.h) || 590)
+        startNodeH:llmNodeStartHeight(node),
+        scaleAtStart:viewport.scale
     };
-    window.onmousemove = onLLMPaneResize;
-    window.onmouseup = endDrag;
+    beginLLMWindowDrag(onLLMPaneResize);
 }
 function onLLMPaneResize(e){
     if(!llmPaneDrag) return;
-    const delta = (e.clientY - llmPaneDrag.sy) / viewport.scale;
+    const delta = (e.clientY - llmPaneDrag.sy) / llmPaneDrag.scaleAtStart;
     const nextInput = Math.max(70, llmPaneDrag.inputStart + delta);
     const grow = Math.round(nextInput - llmPaneDrag.inputStart);
     const node = llmPaneDrag.node;
@@ -8194,14 +8206,14 @@ function startLLMOutputResize(e, node){
         node,
         sy:e.clientY,
         outputStart:Math.max(70, node.llmOutputHeight || 150),
-        startNodeH:Math.max(96, Number(node.h) || 590)
+        startNodeH:llmNodeStartHeight(node),
+        scaleAtStart:viewport.scale
     };
-    window.onmousemove = onLLMOutputResize;
-    window.onmouseup = endDrag;
+    beginLLMWindowDrag(onLLMOutputResize);
 }
 function onLLMOutputResize(e){
     if(!llmOutputDrag) return;
-    const delta = (e.clientY - llmOutputDrag.sy) / viewport.scale;
+    const delta = (e.clientY - llmOutputDrag.sy) / llmOutputDrag.scaleAtStart;
     const nextOutput = Math.max(70, llmOutputDrag.outputStart + delta);
     const grow = Math.round(nextOutput - llmOutputDrag.outputStart);
     const node = llmOutputDrag.node;
@@ -13851,7 +13863,7 @@ function sanitizeConnections(){
     connections = (connections || []).filter(c => canConnect(c.from, c.to));
 }
 function endDrag(event=null){
-    const hadContentDrag = Boolean(dragNode || resizeNode || llmPaneDrag || knifeChanged || tempLink);
+    const hadContentDrag = Boolean(dragNode || resizeNode || llmPaneDrag || llmOutputDrag || knifeChanged || tempLink);
     const hadViewportDrag = Boolean(dragBoard || minimapDrag);
     if(dragNode){
         const moved = [dragNode.node, ...(dragNode.children || []).map(c => c.node)].filter(Boolean);
@@ -13862,8 +13874,15 @@ function endDrag(event=null){
     dragNode = null;
     dragBoard = null;
     resizeNode = null;
-llmPaneDrag = null;
+    llmPaneDrag = null;
     llmOutputDrag = null;
+    if(llmBlurGuard){
+        window.removeEventListener('blur', llmBlurGuard);
+        llmBlurGuard = null;
+    }
+    window.removeEventListener('mousemove', onLLMPaneResize, true);
+    window.removeEventListener('mousemove', onLLMOutputResize, true);
+    window.removeEventListener('mouseup', endDrag, true);
     knifeActive = false;
     knifePoint = null;
     knifeTrail = [];
