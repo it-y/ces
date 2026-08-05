@@ -300,6 +300,7 @@ let linksRenderQueued = false;
 let zoomPreviewState = null;
 let resizeNode = null;
 let llmPaneDrag = null;
+let llmOutputDrag = null;
 let tempLink = null;
 let knifeActive = false;
 let knifePoint = null;
@@ -7963,7 +7964,7 @@ function renderLLMBody(node){
             <button class="llm-sys-toggle ${node.showSystem ? 'active' : ''}" type="button">System</button>
         </div>
         ${imgBadge}
-        ${node.showSystem ? `<textarea class="llm-system" placeholder="${tr('canvas.systemPrompt')}">${escapeHtml(node.systemPrompt || '')}</textarea>` : ''}
+        ${node.showSystem ? `<textarea class="llm-system" style="height:${Math.max(74, node.llmSystemHeight || 74)}px" placeholder="${tr('canvas.systemPrompt')}">${escapeHtml(node.systemPrompt || '')}</textarea>` : ''}
         <div class="llm-node-pane"></div>
         <div class="llm-chat-pane"></div>
     `;
@@ -8024,6 +8025,7 @@ function renderLLMNodePane(container, node){
             <button class="llm-copy-btn llm-output-copy" type="button" title="复制"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
             <div class="llm-output llm-result-output">${escapeHtml(node.outputText || tr('canvas.llmOutputEmpty'))}</div>
         </div>
+        <div class="llm-pane-resizer llm-output-resizer" title="${tr('canvas.resizePanes')}"></div>
         <div class="gen-run-row mt-2">
             <button class="llm-run ${node.running ? 'running' : ''}" ${node.running ? 'disabled' : ''}><i data-lucide="play" class="w-4 h-4"></i>${node.running ? tr('canvas.running') : 'Run LLM'}</button>
             ${cascadeBtnHtml(node)}
@@ -8037,6 +8039,8 @@ function renderLLMNodePane(container, node){
     }
     bindScrollableText(container.querySelector('.llm-result-output'));
     container.querySelector('.llm-pane-resizer').onmousedown = e => startLLMPaneResize(e, node);
+    const outputResizer = container.querySelector('.llm-output-resizer');
+    if(outputResizer) outputResizer.onmousedown = e => startLLMOutputResize(e, node);
     container.querySelector('.llm-run').onclick = e => { e.stopPropagation(); runLLMNode(node.id); };
     bindCascadeButtons(container, node.id);
     const copyBtn = container.querySelector('.llm-output-copy');
@@ -8159,33 +8163,60 @@ function startLLMPaneResize(e, node){
         node,
         sy:e.clientY,
         inputStart:Math.max(70, node.llmInputHeight || 110),
-        outputStart:Math.max(70, node.llmOutputHeight || 150)
+        startNodeH:Math.max(96, Number(node.h) || 590)
     };
     window.onmousemove = onLLMPaneResize;
     window.onmouseup = endDrag;
 }
 function onLLMPaneResize(e){
     if(!llmPaneDrag) return;
-    const total = llmPaneDrag.inputStart + llmPaneDrag.outputStart;
     const delta = (e.clientY - llmPaneDrag.sy) / viewport.scale;
-    const minPane = 70;
-    const nextInput = Math.max(minPane, Math.min(total - minPane, llmPaneDrag.inputStart + delta));
-    const nextOutput = Math.max(minPane, total - nextInput);
-    llmPaneDrag.node.llmInputHeight = Math.round(nextInput);
-    llmPaneDrag.node.llmOutputHeight = Math.round(nextOutput);
-    const el = nodesEl.querySelector(`.node[data-id="${llmPaneDrag.node.id}"]`);
+    const nextInput = Math.max(70, llmPaneDrag.inputStart + delta);
+    const grow = Math.round(nextInput - llmPaneDrag.inputStart);
+    const node = llmPaneDrag.node;
+    node.llmInputHeight = Math.round(nextInput);
+    node.h = Math.max(96, llmPaneDrag.startNodeH + grow);
+    const el = nodesEl.querySelector(`.node[data-id="${node.id}"]`);
     if(el){
+        el.style.height = `${node.h}px`;
         const inputEl = el.querySelector('.llm-input-output');
-        const outputEl = el.querySelector('.llm-result-output');
         if(inputEl){
-            inputEl.style.height = `${llmPaneDrag.node.llmInputHeight}px`;
-            inputEl.style.flexBasis = `${llmPaneDrag.node.llmInputHeight}px`;
-        }
-        if(outputEl){
-            outputEl.style.height = `${llmPaneDrag.node.llmOutputHeight}px`;
-            outputEl.style.flexBasis = `${llmPaneDrag.node.llmOutputHeight}px`;
+            inputEl.style.height = `${node.llmInputHeight}px`;
+            inputEl.style.flexBasis = `${node.llmInputHeight}px`;
         }
     }
+    scheduleSave();
+}
+function startLLMOutputResize(e, node){
+    e.preventDefault();
+    e.stopPropagation();
+    llmOutputDrag = {
+        node,
+        sy:e.clientY,
+        outputStart:Math.max(70, node.llmOutputHeight || 150),
+        startNodeH:Math.max(96, Number(node.h) || 590)
+    };
+    window.onmousemove = onLLMOutputResize;
+    window.onmouseup = endDrag;
+}
+function onLLMOutputResize(e){
+    if(!llmOutputDrag) return;
+    const delta = (e.clientY - llmOutputDrag.sy) / viewport.scale;
+    const nextOutput = Math.max(70, llmOutputDrag.outputStart + delta);
+    const grow = Math.round(nextOutput - llmOutputDrag.outputStart);
+    const node = llmOutputDrag.node;
+    node.llmOutputHeight = Math.round(nextOutput);
+    node.h = Math.max(96, llmOutputDrag.startNodeH + grow);
+    const el = nodesEl.querySelector(`.node[data-id="${node.id}"]`);
+    if(el){
+        el.style.height = `${node.h}px`;
+        const outputWrap = el.querySelector('.llm-output-wrap');
+        if(outputWrap){
+            outputWrap.style.height = `${node.llmOutputHeight}px`;
+            outputWrap.style.flexBasis = `${node.llmOutputHeight}px`;
+        }
+    }
+    scheduleSave();
 }
 function llmInputText(node){
     return connections.filter(c => c.to === node.id).map(c => nodes.find(n => n.id === c.from)).filter(Boolean).map(n => {
@@ -13661,6 +13692,7 @@ function startNodeResize(e, node){
     if(node.type === 'llm'){
         resizeNode.baseInputH = Math.max(70, node.llmInputHeight || 110);
         resizeNode.baseOutputH = Math.max(70, node.llmOutputHeight || 150);
+        resizeNode.baseSysH = Math.max(74, node.llmSystemHeight || 74);
     }
     document.body.classList.add('canvas-node-resize');
     window.onmousemove = onNodeResize;
@@ -13680,21 +13712,23 @@ function onNodeResize(e){
         el.style.height = `${resizeNode.node.h}px`;
     }
     if(resizeNode.node.type === 'llm' && resizeNode.baseInputH && resizeNode.sh > 0){
-        const ratio = resizeNode.node.h / resizeNode.sh;
-        const nextInputH = Math.max(70, Math.round(resizeNode.baseInputH * ratio));
-        const nextOutputH = Math.max(70, Math.round(resizeNode.baseOutputH * ratio));
+        const grow = resizeNode.node.h - resizeNode.sh;
+        const inputGrow = resizeNode.node.showSystem ? Math.round(grow * 0.6) : grow;
+        const sysGrow = resizeNode.node.showSystem ? Math.round(grow * 0.4) : 0;
+        const nextInputH = Math.max(70, resizeNode.baseInputH + inputGrow);
+        const nextSysH = Math.max(74, resizeNode.baseSysH + sysGrow);
         resizeNode.node.llmInputHeight = nextInputH;
-        resizeNode.node.llmOutputHeight = nextOutputH;
+        resizeNode.node.llmOutputHeight = resizeNode.baseOutputH;
+        if(resizeNode.node.showSystem) resizeNode.node.llmSystemHeight = nextSysH;
         if(el){
             const inputEl = el.querySelector('.llm-input-area');
             if(inputEl){
                 inputEl.style.height = `${nextInputH}px`;
                 inputEl.style.flexBasis = `${nextInputH}px`;
             }
-            const outputWrap = el.querySelector('.llm-output-wrap');
-            if(outputWrap){
-                outputWrap.style.height = `${nextOutputH}px`;
-                outputWrap.style.flexBasis = `${nextOutputH}px`;
+            if(resizeNode.node.showSystem){
+                const sysEl = el.querySelector('.llm-system');
+                if(sysEl) sysEl.style.height = `${nextSysH}px`;
             }
         }
     }
@@ -13828,7 +13862,8 @@ function endDrag(event=null){
     dragNode = null;
     dragBoard = null;
     resizeNode = null;
-    llmPaneDrag = null;
+llmPaneDrag = null;
+    llmOutputDrag = null;
     knifeActive = false;
     knifePoint = null;
     knifeTrail = [];

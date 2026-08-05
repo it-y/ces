@@ -715,7 +715,8 @@ input[type=range].canvas-range::-webkit-slider-runnable-track { height:3px; bord
 .llm-pane-resizer { height:12px; flex:0 0 12px; display:flex; align-items:center; justify-content:center; cursor:row-resize; touch-action:none; }
 .llm-pane-resizer::before { content:""; width:52px; height:3px; border-radius:999px; background:#cbd5e1; opacity:.72; transition:opacity .14s var(--ease), background .14s var(--ease); }
 .llm-pane-resizer:hover::before { opacity:1; background:#94a3b8; }
-.node.sized.llm-node .llm-output-wrap { flex:1; min-height:0; }
+.llm-node-pane { padding-bottom:15px; }
+.node.sized.llm-node .llm-output-wrap { flex:0 0 auto; min-height:0; }
 .node.sized.llm-node .llm-node-pane,
 .node.sized.llm-node .llm-chat-pane { flex:1; min-height:0; display:flex; flex-direction:column; gap:6px; }
 .node.sized.llm-node .llm-run { margin-top:auto; flex-shrink:0; }
