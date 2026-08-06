@@ -74,10 +74,22 @@ async def _thumbnail_from_local(filepath: Path, width: int) -> Response:
 
 
 async def _image_thumbnail(filepath: Path, width: int) -> Response:
-    """PIL 图片缩略图"""
+    """PIL 图片缩略图，带磁盘缓存 — 第二次打开秒开"""
+    import hashlib
     try:
         from PIL import Image
         import asyncio
+
+        # 缓存 key = 文件完整路径 + 宽度 + 修改时间
+        mtime = filepath.stat().st_mtime
+        cache_key = hashlib.md5(f"{filepath.resolve()}|{width}|{mtime}".encode()).hexdigest()
+        cache_file = MEDIA_PREVIEW_DIR / f"{cache_key}.jpg"
+
+        # 命中缓存 → 直接返回（不走 PIL，零 CPU）
+        if cache_file.exists():
+            return FileResponse(cache_file, media_type="image/jpeg")
+
+        # 未命中 → 生成缩略图
         img = await asyncio.to_thread(Image.open, str(filepath))
         img = img.convert("RGB")
 
@@ -87,9 +99,11 @@ async def _image_thumbnail(filepath: Path, width: int) -> Response:
             new_h = int(h * ratio)
             img = await asyncio.to_thread(img.resize, (width, new_h), Image.LANCZOS)
 
-        buf = io.BytesIO()
-        await asyncio.to_thread(img.save, buf, format="JPEG", quality=85)
-        return Response(content=buf.getvalue(), media_type="image/jpeg")
+        # 存磁盘，下次秒开
+        MEDIA_PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
+        await asyncio.to_thread(img.save, str(cache_file), format="JPEG", quality=85)
+
+        return FileResponse(cache_file, media_type="image/jpeg")
     except Exception:
         raise HTTPException(500, "缩略图生成失败")
 

@@ -297,6 +297,8 @@ let minimapDrag = false;
 let minimapState = null;
 let minimapRenderQueued = false;
 let linksRenderQueued = false;
+let panRenderQueued = false;
+let panPending = null;
 let zoomPreviewState = null;
 let resizeNode = null;
 let llmPaneDrag = null;
@@ -1168,6 +1170,18 @@ function scheduleLinksRender(){
     requestAnimationFrame(() => {
         linksRenderQueued = false;
         renderLinks();
+    });
+}
+// 拖拽画布时 mousemove 频率远超屏幕刷新率，用 rAF 合并成每帧最多更新一次 viewport
+function schedulePanViewport(){
+    if(panRenderQueued || !panPending) return;
+    panRenderQueued = true;
+    requestAnimationFrame(() => {
+        panRenderQueued = false;
+        if(!panPending) return;
+        viewport.x = panPending.x;
+        viewport.y = panPending.y;
+        applyViewport();
     });
 }
 function renderMinimap(){
@@ -14383,9 +14397,8 @@ function startBoardPan(e, opts={}){
     document.body.classList.add('canvas-board-pan');
     window.onmousemove = e2 => {
         if(Math.hypot(e2.clientX - dragBoard.sx, e2.clientY - dragBoard.sy) > 4) dragBoard.moved = true;
-        viewport.x = dragBoard.ox + e2.clientX - dragBoard.sx;
-        viewport.y = dragBoard.oy + e2.clientY - dragBoard.sy;
-        applyViewport();
+        panPending = { x: dragBoard.ox + e2.clientX - dragBoard.sx, y: dragBoard.oy + e2.clientY - dragBoard.sy };
+        schedulePanViewport();
     };
     window.onmouseup = e2 => {
         const shouldClearSelection = dragBoard?.clearSelectionOnClick && !dragBoard.moved && selected.size;
