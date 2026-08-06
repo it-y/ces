@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-studio-scale="off">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="/static/images/logo.png" type="image/png">
-    <title>鏃犻檺鐢诲竷</title>
+    <title>无限画布</title>
     <script>
         (function(){
             try {
@@ -16,42 +16,42 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.08.06.6"></script>
-    <script src="/static/vendor/js/lucide.js?v=2026.08.06.6"></script>
-    <script src="/static/js/theme.js?v=2026.08.06.6"></script>
-    <script src="/static/js/i18n.js?v=2026.08.06.6"></script>
-    <link rel="stylesheet" href="/static/css/canvas.css?v=2026.08.06.6">
-    <link rel="stylesheet" href="/static/css/theme.css?v=2026.08.06.6">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.08.06.5"></script>
+    <script src="/static/vendor/js/lucide.js?v=2026.08.06.5"></script>
+    <script src="/static/js/theme.js?v=2026.08.06.5"></script>
+    <script src="/static/js/i18n.js?v=2026.08.06.5"></script>
+    <link rel="stylesheet" href="/static/css/canvas.css?v=2026.08.06.5">
+    <link rel="stylesheet" href="/static/css/theme.css?v=2026.08.06.5">
 </head>
 <body>
     <div id="shell" class="shell no-canvas">
         <div class="topbar">
             <div class="panel canvas-nav">
-                <button id="backToManagerBtn" class="tool-btn" type="button" title="杩斿洖鐢诲竷绠＄悊" aria-label="杩斿洖鐢诲竷绠＄悊" data-i18n-title="canvas.backToManager"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
+                <button id="backToManagerBtn" class="tool-btn" type="button" title="返回画布管理" aria-label="返回画布管理" data-i18n-title="canvas.backToManager"><i data-lucide="arrow-left" class="w-4 h-4"></i></button>
                 <div class="canvas-nav-meta">
-                    <div id="currentCanvasTitle" class="current-canvas-title">鏈懡鍚嶇敾甯?/div>
+                    <div id="currentCanvasTitle" class="current-canvas-title">未命名画布</div>
                     <div id="currentCanvasTime" class="current-canvas-time">--</div>
                 </div>
-                <button id="openCanvasFolderBtn" class="tool-btn" type="button" onclick="openCanvasFolder()" title="鎵撳紑鐢诲竷璧勬簮鏂囦欢澶? aria-label="鎵撳紑鐢诲竷璧勬簮鏂囦欢澶? style="display:none"><i data-lucide="folder-open" class="w-4 h-4"></i></button>
-                <p id="saveState" style="display:none" data-i18n="canvas.chooseFirst">璇烽€夋嫨鎴栨柊寤虹敾甯?/p>
+                <button id="openCanvasFolderBtn" class="tool-btn" type="button" onclick="openCanvasFolder()" title="打开画布资源文件夹" aria-label="打开画布资源文件夹" style="display:none"><i data-lucide="folder-open" class="w-4 h-4"></i></button>
+                <p id="saveState" style="display:none" data-i18n="canvas.chooseFirst">请选择或新建画布</p>
             </div>
         </div>
-        <!-- 閫夌敾甯?gate 宸叉媶鍒嗗埌鐙珛椤甸潰 static/canvas-list.html锛堟洿杞婚噺锛夈€傛湰椤靛彧璐熻矗缂栬緫鍣紝閫氳繃 ?id 鎵撳紑銆?-->
+        <!-- 选画布 gate 已拆分到独立页面 static/canvas-list.html（更轻量）。本页只负责编辑器，通过 ?id 打开。 -->
 
         <div id="board" class="board editor-only">
-            <div id="dropOverlay" class="drop-overlay" data-i18n="canvas.dropImage">鎷栨斁鍥剧墖鍒扮敾甯?/div>
+            <div id="dropOverlay" class="drop-overlay" data-i18n="canvas.dropImage">拖放图片到画布</div>
             <div id="selectionBox" class="selection-box"></div>
             <div id="selectionHub" class="selection-hub"></div>
             <div id="createMenu" class="create-menu">
-                <button class="menu-btn" onclick="menuAdd('image')"><i data-lucide="image-plus" class="w-4 h-4"></i><span data-i18n="canvas.imageCard">涓婁紶鑺傜偣</span></button>
-                <button class="menu-btn" onclick="menuAdd('prompt')"><i data-lucide="text-cursor-input" class="w-4 h-4"></i><span data-i18n="canvas.prompt">鎻愮ず璇?/span></button>
-                <button class="menu-btn" onclick="menuAdd('loop')"><i data-lucide="repeat-2" class="w-4 h-4"></i><span data-i18n="canvas.loopNode">寰幆鑺傜偣</span></button>
-                <button class="menu-btn" onclick="menuAdd('llm')"><i data-lucide="message-square-text" class="w-4 h-4"></i><span data-i18n="canvas.llmNode">LLM 鑺傜偣</span></button>
-                <button class="menu-btn" onclick="menuAdd('generator')"><i data-lucide="wand-sparkles" class="w-4 h-4"></i><span data-i18n="canvas.apiGenerate">API鐢熸垚</span></button>
-                <button class="menu-btn" onclick="menuAdd('msgen')"><i data-lucide="cloud-lightning" class="w-4 h-4"></i><span data-i18n="canvas.modelscopeGenerate">Modelscope鐢熸垚</span></button>
-                <button class="menu-btn" onclick="menuAdd('video')"><i data-lucide="clapperboard" class="w-4 h-4"></i><span data-i18n="canvas.videoGenerateNode">瑙嗛鐢熸垚</span></button>
-                <button class="menu-btn" onclick="menuAdd('rh')"><i data-lucide="workflow" class="w-4 h-4"></i><span data-i18n="canvas.rhGenerate">RH鐢熸垚</span></button>
-                <button class="menu-btn" onclick="menuAdd('comfy')"><i data-lucide="workflow" class="w-4 h-4"></i><span data-i18n="canvas.comfyGenerate">ComfyUI 鐢熸垚</span></button>
+                <button class="menu-btn" onclick="menuAdd('image')"><i data-lucide="image-plus" class="w-4 h-4"></i><span data-i18n="canvas.imageCard">上传节点</span></button>
+                <button class="menu-btn" onclick="menuAdd('prompt')"><i data-lucide="text-cursor-input" class="w-4 h-4"></i><span data-i18n="canvas.prompt">提示词</span></button>
+                <button class="menu-btn" onclick="menuAdd('loop')"><i data-lucide="repeat-2" class="w-4 h-4"></i><span data-i18n="canvas.loopNode">循环节点</span></button>
+                <button class="menu-btn" onclick="menuAdd('llm')"><i data-lucide="message-square-text" class="w-4 h-4"></i><span data-i18n="canvas.llmNode">LLM 节点</span></button>
+                <button class="menu-btn" onclick="menuAdd('generator')"><i data-lucide="wand-sparkles" class="w-4 h-4"></i><span data-i18n="canvas.apiGenerate">API生成</span></button>
+                <button class="menu-btn" onclick="menuAdd('msgen')"><i data-lucide="cloud-lightning" class="w-4 h-4"></i><span data-i18n="canvas.modelscopeGenerate">Modelscope生成</span></button>
+                <button class="menu-btn" onclick="menuAdd('video')"><i data-lucide="clapperboard" class="w-4 h-4"></i><span data-i18n="canvas.videoGenerateNode">视频生成</span></button>
+                <button class="menu-btn" onclick="menuAdd('rh')"><i data-lucide="workflow" class="w-4 h-4"></i><span data-i18n="canvas.rhGenerate">RH生成</span></button>
+                <button class="menu-btn" onclick="menuAdd('comfy')"><i data-lucide="workflow" class="w-4 h-4"></i><span data-i18n="canvas.comfyGenerate">ComfyUI 生成</span></button>
                 <button class="menu-btn" onclick="menuAdd('ltxDirector')"><i data-lucide="film" class="w-4 h-4"></i><span data-i18n="canvas.ltxDirector">LTX Director</span></button>
                 <button class="menu-btn" onclick="menuAdd('output')"><i data-lucide="circle-dot" class="w-4 h-4"></i>Output</button>
             </div>
@@ -64,51 +64,51 @@
                 <div id="linkControls" class="link-controls"></div>
                 <div id="nodes"></div>
             </div>
-            <button id="canvasArrangeBtn" class="minimap-arrange-btn" type="button" title="鏁寸悊閫変腑鑺傜偣" aria-label="鏁寸悊閫変腑鑺傜偣"><i data-lucide="layout-grid" class="w-3.5 h-3.5"></i><span>鏁寸悊閫変腑</span></button>
-            <div id="minimap" class="minimap" title="瀵艰埅鍦板浘">
+            <button id="canvasArrangeBtn" class="minimap-arrange-btn" type="button" title="整理选中节点" aria-label="整理选中节点"><i data-lucide="layout-grid" class="w-3.5 h-3.5"></i><span>整理选中</span></button>
+            <div id="minimap" class="minimap" title="导航地图">
                 <div id="minimapContent" class="minimap-content">
                     <div id="minimapViewport" class="minimap-viewport"></div>
                 </div>
             </div>
             <aside id="canvasAssetPanel" class="canvas-asset-panel">
                 <div class="canvas-asset-head">
-                    <strong><i data-lucide="library" class="w-4 h-4"></i><span>璧勪骇搴?/span></strong>
-                    <button id="canvasAssetCloseBtn" class="canvas-asset-icon-btn" type="button" title="鍏抽棴"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <strong><i data-lucide="library" class="w-4 h-4"></i><span>资产库</span></strong>
+                    <button id="canvasAssetCloseBtn" class="canvas-asset-icon-btn" type="button" title="关闭"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <select id="canvasAssetLibrarySelect" class="canvas-asset-select"></select>
                 <div class="canvas-asset-row">
                     <select id="canvasAssetCategorySelect" class="canvas-asset-select"></select>
-                    <button id="canvasAssetAddCategoryBtn" class="canvas-asset-icon-btn" type="button" title="鏂板缓鍒嗙粍"><i data-lucide="folder-plus" class="w-4 h-4"></i></button>
+                    <button id="canvasAssetAddCategoryBtn" class="canvas-asset-icon-btn" type="button" title="新建分组"><i data-lucide="folder-plus" class="w-4 h-4"></i></button>
                 </div>
-                <div id="canvasAssetDropZone" class="canvas-asset-drop">鎷栧叆鍥剧墖鎴栬緭鍑轰繚瀛樺埌褰撳墠鍒嗙粍</div>
+                <div id="canvasAssetDropZone" class="canvas-asset-drop">拖入图片或输出保存到当前分组</div>
                 <div id="canvasAssetGrid" class="canvas-asset-grid"></div>
             </aside>
             <aside id="workflowTransferModal" class="workflow-transfer-panel">
                 <div class="workflow-transfer-head">
                     <div>
-                        <div class="workflow-transfer-title">瀵煎叆瀵煎嚭宸ヤ綔娴?/div>
-                        <div id="workflowTransferSub" class="workflow-transfer-sub">瀵煎嚭妗嗛€夎妭鐐癸紝鎴栨妸宸ヤ綔娴佸鍏ュ埌褰撳墠鐢诲竷</div>
+                        <div class="workflow-transfer-title">导入导出工作流</div>
+                        <div id="workflowTransferSub" class="workflow-transfer-sub">导出框选节点，或把工作流导入到当前画布</div>
                     </div>
-                    <button class="canvas-asset-icon-btn" type="button" onclick="closeWorkflowTransferModal()" title="鍏抽棴"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <button class="canvas-asset-icon-btn" type="button" onclick="closeWorkflowTransferModal()" title="关闭"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <div class="workflow-transfer-body">
                     <section class="workflow-transfer-card">
-                        <div class="workflow-transfer-card-head"><i data-lucide="upload" class="w-4 h-4"></i><strong>瀵煎嚭宸ヤ綔娴?/strong></div>
-                        <p>浣跨敤褰撳墠妗嗛€夌殑鑺傜偣鍜屽畠浠箣闂寸殑杩炵嚎鐢熸垚宸ヤ綔娴併€?/p>
-                        <div id="workflowExportMeta" class="workflow-transfer-meta">鏈€夋嫨鑺傜偣</div>
+                        <div class="workflow-transfer-card-head"><i data-lucide="upload" class="w-4 h-4"></i><strong>导出工作流</strong></div>
+                        <p>使用当前框选的节点和它们之间的连线生成工作流。</p>
+                        <div id="workflowExportMeta" class="workflow-transfer-meta">未选择节点</div>
                         <div class="workflow-transfer-actions workflow-export-actions">
-                            <button class="workflow-transfer-btn secondary" type="button" onclick="exportSelectedWorkflow(false)"><i data-lucide="file-json" class="w-4 h-4"></i><span>瀵煎嚭 JSON</span></button>
-                            <button class="workflow-transfer-btn primary" type="button" onclick="exportSelectedWorkflow(true)"><i data-lucide="package" class="w-4 h-4"></i><span>瀵煎嚭骞跺寘鍚祫婧?/span></button>
-                            <button id="workflowExportLibraryBtn" class="workflow-transfer-btn secondary" type="button" onclick="exportSelectedWorkflowToLibrary()"><i data-lucide="library-big" class="w-4 h-4"></i><span>瀵煎嚭鍒拌祫浜у簱</span></button>
+                            <button class="workflow-transfer-btn secondary" type="button" onclick="exportSelectedWorkflow(false)"><i data-lucide="file-json" class="w-4 h-4"></i><span>导出 JSON</span></button>
+                            <button class="workflow-transfer-btn primary" type="button" onclick="exportSelectedWorkflow(true)"><i data-lucide="package" class="w-4 h-4"></i><span>导出并包含资源</span></button>
+                            <button id="workflowExportLibraryBtn" class="workflow-transfer-btn secondary" type="button" onclick="exportSelectedWorkflowToLibrary()"><i data-lucide="library-big" class="w-4 h-4"></i><span>导出到资产库</span></button>
                         </div>
                     </section>
                     <section class="workflow-transfer-card">
-                        <div class="workflow-transfer-card-head"><i data-lucide="download" class="w-4 h-4"></i><strong>瀵煎叆宸ヤ綔娴?/strong></div>
-                        <p>鏀寔宸ヤ綔娴?JSON锛屼篃鏀寔鍖呭惈璧勬簮鐨?ZIP 鍖呫€傚鍏ュ唴瀹逛細杩藉姞鍒板綋鍓嶇敾甯冦€?/p>
+                        <div class="workflow-transfer-card-head"><i data-lucide="download" class="w-4 h-4"></i><strong>导入工作流</strong></div>
+                        <p>支持工作流 JSON，也支持包含资源的 ZIP 包。导入内容会追加到当前画布。</p>
                         <div id="workflowImportDropZone" class="workflow-import-drop">
                             <i data-lucide="file-up" class="w-4 h-4"></i>
-                            <span>鎷栧叆 JSON / ZIP 宸ヤ綔娴?/span>
-                            <small>鎴栫偣鍑婚€夋嫨鏂囦欢</small>
+                            <span>拖入 JSON / ZIP 工作流</span>
+                            <small>或点击选择文件</small>
                         </div>
                     </section>
                 </div>
@@ -136,18 +136,18 @@
                 <div class="output-preview-bar">
                     <div id="outputResolution" class="output-resolution">--</div>
                     <div class="output-preview-actions">
-                        <button id="outputDownloadBtn" class="preview-icon-btn" type="button" title="涓嬭浇" aria-label="涓嬭浇" data-i18n-title="canvas.download"><i data-lucide="download" class="w-4 h-4"></i></button>
-                        <button id="outputDownloadAllBtn" class="preview-icon-btn" type="button" title="涓嬭浇鍏ㄩ儴鍥剧墖" aria-label="涓嬭浇鍏ㄩ儴鍥剧墖" data-i18n-title="canvas.outputDownloadAllImages" style="display:none"><i data-lucide="archive" class="w-4 h-4"></i></button>
-                        <button id="outputSaveAssetBtn" class="preview-icon-btn" type="button" title="瀵煎叆绱犳潗搴? aria-label="瀵煎叆绱犳潗搴?><i data-lucide="library" class="w-4 h-4"></i></button>
-                        <button class="preview-icon-btn" type="button" title="鍏抽棴" aria-label="鍏抽棴" onclick="closeOutputLightbox()" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        <button id="outputDownloadBtn" class="preview-icon-btn" type="button" title="下载" aria-label="下载" data-i18n-title="canvas.download"><i data-lucide="download" class="w-4 h-4"></i></button>
+                        <button id="outputDownloadAllBtn" class="preview-icon-btn" type="button" title="下载全部图片" aria-label="下载全部图片" data-i18n-title="canvas.outputDownloadAllImages" style="display:none"><i data-lucide="archive" class="w-4 h-4"></i></button>
+                        <button id="outputSaveAssetBtn" class="preview-icon-btn" type="button" title="导入素材库" aria-label="导入素材库"><i data-lucide="library" class="w-4 h-4"></i></button>
+                        <button class="preview-icon-btn" type="button" title="关闭" aria-label="关闭" onclick="closeOutputLightbox()" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
                     </div>
                 </div>
             </div>
             <div id="outputPromptPanel" class="output-prompt-panel">
                 <div id="outputPromptText" class="output-prompt-text"></div>
                 <div class="output-prompt-actions">
-                    <button id="outputCopyPromptBtn" class="preview-text-btn secondary" type="button"><i data-lucide="copy" class="w-3.5 h-3.5"></i><span data-i18n="canvas.copyPrompt">澶嶅埗鎻愮ず璇?/span></button>
-                    <button id="outputRerunBtn" class="preview-text-btn" type="button"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span data-i18n="canvas.rerun">鍐嶆杩愯</span></button>
+                    <button id="outputCopyPromptBtn" class="preview-text-btn secondary" type="button"><i data-lucide="copy" class="w-3.5 h-3.5"></i><span data-i18n="canvas.copyPrompt">复制提示词</span></button>
+                    <button id="outputRerunBtn" class="preview-text-btn" type="button"><i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span data-i18n="canvas.rerun">再次运行</span></button>
                 </div>
             </div>
             </div>
@@ -156,15 +156,15 @@
             <div id="promptTemplatePanel" class="prompt-template-panel" onclick="event.stopPropagation()">
                 <div class="prompt-template-head">
                     <div>
-                        <strong data-i18n="smart.promptTemplateLibrary">妯℃澘搴?/strong>
-                        <span data-i18n="canvas.promptTemplateSystem">绯荤粺鎻愮ず璇?/span>
+                        <strong data-i18n="smart.promptTemplateLibrary">模板库</strong>
+                        <span data-i18n="canvas.promptTemplateSystem">系统提示词</span>
                     </div>
-                    <button id="promptTemplateClose" type="button" title="鍏抽棴" aria-label="鍏抽棴" data-i18n-title="common.close"><i data-lucide="x"></i></button>
+                    <button id="promptTemplateClose" type="button" title="关闭" aria-label="关闭" data-i18n-title="common.close"><i data-lucide="x"></i></button>
                 </div>
-                <select id="promptTemplateLibrarySelect" class="prompt-template-library-select" title="閫夋嫨鎻愮ず璇嶅簱"></select>
+                <select id="promptTemplateLibrarySelect" class="prompt-template-library-select" title="选择提示词库"></select>
                 <div class="prompt-template-search">
                     <i data-lucide="search"></i>
-                    <input id="promptTemplateSearch" type="search" placeholder="鎼滅储妯℃澘..." data-i18n-placeholder="canvas.promptTemplateSearch">
+                    <input id="promptTemplateSearch" type="search" placeholder="搜索模板..." data-i18n-placeholder="canvas.promptTemplateSearch">
                 </div>
                 <div id="promptTemplateCats" class="prompt-template-cats"></div>
                 <div id="promptTemplateBody" class="prompt-template-body"></div>
@@ -173,8 +173,8 @@
         <div id="logModal" class="log-modal" onclick="closeCanvasLog()">
             <div class="log-panel" onclick="event.stopPropagation()">
                 <div class="log-head">
-                    <div class="log-title" data-i18n="canvas.generationLogs">鐢熸垚鏃ュ織</div>
-                    <button class="preview-icon-btn" type="button" onclick="closeCanvasLog()" title="鍏抽棴" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <div class="log-title" data-i18n="canvas.generationLogs">生成日志</div>
+                    <button class="preview-icon-btn" type="button" onclick="closeCanvasLog()" title="关闭" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <div id="logList" class="log-list"></div>
             </div>
@@ -183,15 +183,15 @@
             <div class="asset-manager-panel" onclick="event.stopPropagation()">
                 <div class="asset-manager-head">
                     <div>
-                        <div class="asset-manager-title">璧勪骇搴撶鐞?/div>
-                        <div class="asset-manager-sub">绠＄悊鍥剧墖璧勪骇搴撳拰鎻愮ず璇嶅簱</div>
+                        <div class="asset-manager-title">资产库管理</div>
+                        <div class="asset-manager-sub">管理图片资产库和提示词库</div>
                     </div>
-                    <button class="preview-icon-btn" type="button" onclick="closeAssetManager()" title="鍏抽棴"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <button class="preview-icon-btn" type="button" onclick="closeAssetManager()" title="关闭"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <div class="asset-manager-tabs">
-                    <button class="active" type="button" data-manager-tab="assets"><i data-lucide="image" class="w-4 h-4"></i><span>鍥剧墖璧勪骇</span></button>
-                    <button type="button" data-manager-tab="workflows"><i data-lucide="workflow" class="w-4 h-4"></i><span>宸ヤ綔娴?/span></button>
-                    <button type="button" data-manager-tab="prompts"><i data-lucide="text-cursor-input" class="w-4 h-4"></i><span>鎻愮ず璇嶅簱</span></button>
+                    <button class="active" type="button" data-manager-tab="assets"><i data-lucide="image" class="w-4 h-4"></i><span>图片资产</span></button>
+                    <button type="button" data-manager-tab="workflows"><i data-lucide="workflow" class="w-4 h-4"></i><span>工作流</span></button>
+                    <button type="button" data-manager-tab="prompts"><i data-lucide="text-cursor-input" class="w-4 h-4"></i><span>提示词库</span></button>
                 </div>
                 <div id="assetManagerBody" class="asset-manager-body"></div>
             </div>
@@ -201,25 +201,25 @@
             <div class="image-edit-panel" onclick="event.stopPropagation()">
                 <div class="image-edit-head">
                     <div class="image-edit-headline">
-                        <div id="imageEditTitle" class="image-edit-title" data-i18n="canvas.editImage">缂栬緫鍥剧墖</div>
-                        <div id="imageEditSub" class="image-edit-sub" data-i18n="canvas.editImageSub">閫夋嫨瑁佸壀銆侀伄缃╂垨鐢荤瑪妯″紡</div>
+                        <div id="imageEditTitle" class="image-edit-title" data-i18n="canvas.editImage">编辑图片</div>
+                        <div id="imageEditSub" class="image-edit-sub" data-i18n="canvas.editImageSub">选择裁剪、遮罩或画笔模式</div>
                     </div>
                     <div class="image-edit-mode">
-                        <button type="button" data-image-edit-mode="preview" class="active"><i data-lucide="eye" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modePreview">棰勮</span></button>
-                        <button type="button" data-image-edit-mode="crop"><i data-lucide="crop" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeCrop">瑁佸壀</span></button>
-                        <button type="button" data-image-edit-mode="outpaint"><i data-lucide="expand" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeOutpaint">鎵╁睍</span></button>
-                        <button type="button" data-image-edit-mode="mask"><i data-lucide="brush" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeMask">閬僵</span></button>
-                        <button type="button" data-image-edit-mode="brush"><i data-lucide="paintbrush" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeBrush">鐢荤瑪</span></button>
-                        <button type="button" data-image-edit-mode="grid"><i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeGrid">瀹牸鍒囧垎</span></button>
+                        <button type="button" data-image-edit-mode="preview" class="active"><i data-lucide="eye" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modePreview">预览</span></button>
+                        <button type="button" data-image-edit-mode="crop"><i data-lucide="crop" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeCrop">裁剪</span></button>
+                        <button type="button" data-image-edit-mode="outpaint"><i data-lucide="expand" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeOutpaint">扩展</span></button>
+                        <button type="button" data-image-edit-mode="mask"><i data-lucide="brush" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeMask">遮罩</span></button>
+                        <button type="button" data-image-edit-mode="brush"><i data-lucide="paintbrush" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeBrush">画笔</span></button>
+                        <button type="button" data-image-edit-mode="grid"><i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeGrid">宫格切分</span></button>
                     </div>
                     <div class="image-edit-head-end">
-                        <button class="preview-icon-btn" type="button" onclick="closeImageEditor()" title="鍏抽棴" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        <button class="preview-icon-btn" type="button" onclick="closeImageEditor()" title="关闭" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
                     </div>
                 </div>
                 <div id="imageCropTools" class="image-edit-tools crop-ratio-tools">
-                    <span class="image-edit-sub">姣斾緥</span>
-                    <button class="crop-ratio-btn active" type="button" data-crop-ratio="free">鑷敱</button>
-                    <button class="crop-ratio-btn" type="button" data-crop-ratio="source">鍘熷浘</button>
+                    <span class="image-edit-sub">比例</span>
+                    <button class="crop-ratio-btn active" type="button" data-crop-ratio="free">自由</button>
+                    <button class="crop-ratio-btn" type="button" data-crop-ratio="source">原图</button>
                     <button class="crop-ratio-btn" type="button" data-crop-ratio="1:1">1:1</button>
                     <button class="crop-ratio-btn" type="button" data-crop-ratio="4:3">4:3</button>
                     <button class="crop-ratio-btn" type="button" data-crop-ratio="3:4">3:4</button>
@@ -229,46 +229,46 @@
                     <button class="crop-ratio-btn" type="button" data-crop-ratio="2:3">2:3</button>
                 </div>
                 <div id="imageMaskTools" class="image-edit-tools">
-                    <label><span data-i18n="canvas.brushSize">绗斿埛</span> <input id="maskBrushSize" type="range" min="4" max="160" value="42"></label>
-                    <button id="maskUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoEditDrawing()" title="鎾ら攢"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
-                    <button id="maskRedoBtn" class="image-edit-btn secondary" type="button" onclick="redoEditDrawing()" title="鎭㈠"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" onclick="clearEditDrawing()"><i data-lucide="eraser" class="w-4 h-4"></i><span data-i18n="canvas.clear">娓呯┖</span></button>
-                    <span class="image-edit-sub" data-i18n="canvas.maskHint">鐧借壊鍖哄煙涓鸿缂栬緫鐨勯伄缃?/span>
+                    <label><span data-i18n="canvas.brushSize">笔刷</span> <input id="maskBrushSize" type="range" min="4" max="160" value="42"></label>
+                    <button id="maskUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoEditDrawing()" title="撤销"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+                    <button id="maskRedoBtn" class="image-edit-btn secondary" type="button" onclick="redoEditDrawing()" title="恢复"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" onclick="clearEditDrawing()"><i data-lucide="eraser" class="w-4 h-4"></i><span data-i18n="canvas.clear">清空</span></button>
+                    <span class="image-edit-sub" data-i18n="canvas.maskHint">白色区域为要编辑的遮罩</span>
                 </div>
                 <div id="imageBrushTools" class="image-edit-tools">
-                    <button class="image-edit-btn primary" type="button" data-brush-tool="free" onclick="setBrushTool('free')" title="鑷敱鐢荤瑪"><i data-lucide="paintbrush" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" data-brush-tool="rect" onclick="setBrushTool('rect')" title="鐭╁舰"><i data-lucide="square" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" data-brush-tool="ellipse" onclick="setBrushTool('ellipse')" title="妞渾"><i data-lucide="circle" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" data-brush-tool="label" onclick="setBrushTool('label')" title="鏁板瓧鏍囩"><i data-lucide="list-ordered" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" data-brush-tool="text" onclick="setBrushTool('text')" title="鏂囧瓧鏍囩"><i data-lucide="type" class="w-4 h-4"></i></button>
-                    <label><span data-i18n="canvas.color">棰滆壊</span> <input id="paintBrushColor" type="color" value="#ff2d55"></label>
-                    <label><span data-i18n="canvas.brushSize">绗斿埛</span> <input id="paintBrushSize" type="range" min="2" max="80" value="14"></label>
-                    <button id="brushUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoEditDrawing()" title="鎾ら攢"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
-                    <button id="brushRedoBtn" class="image-edit-btn secondary" type="button" onclick="redoEditDrawing()" title="鎭㈠"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" onclick="clearEditDrawing()"><i data-lucide="eraser" class="w-4 h-4"></i><span data-i18n="canvas.clear">娓呯┖</span></button>
+                    <button class="image-edit-btn primary" type="button" data-brush-tool="free" onclick="setBrushTool('free')" title="自由画笔"><i data-lucide="paintbrush" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="rect" onclick="setBrushTool('rect')" title="矩形"><i data-lucide="square" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="ellipse" onclick="setBrushTool('ellipse')" title="椭圆"><i data-lucide="circle" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="label" onclick="setBrushTool('label')" title="数字标签"><i data-lucide="list-ordered" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="text" onclick="setBrushTool('text')" title="文字标签"><i data-lucide="type" class="w-4 h-4"></i></button>
+                    <label><span data-i18n="canvas.color">颜色</span> <input id="paintBrushColor" type="color" value="#ff2d55"></label>
+                    <label><span data-i18n="canvas.brushSize">笔刷</span> <input id="paintBrushSize" type="range" min="2" max="80" value="14"></label>
+                    <button id="brushUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoEditDrawing()" title="撤销"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+                    <button id="brushRedoBtn" class="image-edit-btn secondary" type="button" onclick="redoEditDrawing()" title="恢复"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" onclick="clearEditDrawing()"><i data-lucide="eraser" class="w-4 h-4"></i><span data-i18n="canvas.clear">清空</span></button>
                 </div>
                 <div id="imageGridTools" class="image-edit-tools">
-                    <button id="gridCustomToggle" class="image-edit-btn secondary" type="button" onclick="toggleGridCustomMode()" data-i18n="canvas.gridCustom" data-i18n-title="canvas.gridCustomTitle" title="鑷敱鏀剧疆鍒囧壊绾?>鑷畾涔?/button>
+                    <button id="gridCustomToggle" class="image-edit-btn secondary" type="button" onclick="toggleGridCustomMode()" data-i18n="canvas.gridCustom" data-i18n-title="canvas.gridCustomTitle" title="自由放置切割线">自定义</button>
                     <div class="grid-preset-row">
-                        <span class="image-edit-sub" data-i18n="canvas.gridPresets">棰勮</span>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(1, 2)">1脳2</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 1)">2脳1</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 2)">2脳2</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 3)">2脳3</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(3, 2)">3脳2</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(3, 3)">3脳3</button>
+                        <span class="image-edit-sub" data-i18n="canvas.gridPresets">预设</span>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(1, 2)">1×2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 1)">2×1</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 2)">2×2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 3)">2×3</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(3, 2)">3×2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(3, 3)">3×3</button>
                     </div>
                     <span id="gridRegularControls" style="display:contents">
-                        <label><span data-i18n="canvas.gridHLines">妯悜绾?/span> <input id="gridHorizontalLines" type="number" min="0" max="20" value="2"></label>
-                        <label><span data-i18n="canvas.gridVLines">绔栧悜绾?/span> <input id="gridVerticalLines" type="number" min="0" max="20" value="2"></label>
+                        <label><span data-i18n="canvas.gridHLines">横向线</span> <input id="gridHorizontalLines" type="number" min="0" max="20" value="2"></label>
+                        <label><span data-i18n="canvas.gridVLines">竖向线</span> <input id="gridVerticalLines" type="number" min="0" max="20" value="2"></label>
                     </span>
                     <div id="gridCustomControls" style="display:none;align-items:center;gap:6px">
-                        <button id="gridOrientH" class="image-edit-btn primary" type="button" onclick="setGridCustomOrientation('h')" data-i18n="canvas.gridOrientH" data-i18n-title="canvas.gridOrientHTitle" title="鐐瑰嚮鍥剧墖鏀剧疆姘村钩绾?>姘村钩</button>
-                        <button id="gridOrientV" class="image-edit-btn secondary" type="button" onclick="setGridCustomOrientation('v')" data-i18n="canvas.gridOrientV" data-i18n-title="canvas.gridOrientVTitle" title="鐐瑰嚮鍥剧墖鏀剧疆绔栫洿绾?>鍨傜洿</button>
-                        <button id="gridUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoGridCustomLine()" data-i18n-title="canvas.gridUndo" title="鎾ら攢涓婁竴鏉＄嚎" disabled style="opacity:.4"><i data-lucide="undo-2" class="w-3.5 h-3.5"></i></button>
-                        <button class="image-edit-btn secondary" type="button" onclick="clearGridCustomLines()" data-i18n-title="canvas.gridClearLines" title="娓呴櫎鎵€鏈夎嚜瀹氫箟绾?><i data-lucide="eraser" class="w-3.5 h-3.5"></i></button>
+                        <button id="gridOrientH" class="image-edit-btn primary" type="button" onclick="setGridCustomOrientation('h')" data-i18n="canvas.gridOrientH" data-i18n-title="canvas.gridOrientHTitle" title="点击图片放置水平线">水平</button>
+                        <button id="gridOrientV" class="image-edit-btn secondary" type="button" onclick="setGridCustomOrientation('v')" data-i18n="canvas.gridOrientV" data-i18n-title="canvas.gridOrientVTitle" title="点击图片放置竖直线">垂直</button>
+                        <button id="gridUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoGridCustomLine()" data-i18n-title="canvas.gridUndo" title="撤销上一条线" disabled style="opacity:.4"><i data-lucide="undo-2" class="w-3.5 h-3.5"></i></button>
+                        <button class="image-edit-btn secondary" type="button" onclick="clearGridCustomLines()" data-i18n-title="canvas.gridClearLines" title="清除所有自定义线"><i data-lucide="eraser" class="w-3.5 h-3.5"></i></button>
                     </div>
-                    <label class="grid-gap-control"><span data-i18n="canvas.gridGap">闂撮殧(px)</span> <input id="gridGapSize" type="range" min="0" max="240" step="1" value="0"><span id="gridGapValue" class="grid-gap-value">0</span></label>
+                    <label class="grid-gap-control"><span data-i18n="canvas.gridGap">间隔(px)</span> <input id="gridGapSize" type="range" min="0" max="240" step="1" value="0"><span id="gridGapValue" class="grid-gap-value">0</span></label>
                     <span id="gridSplitCount" class="image-edit-sub"></span>
                 </div>
                 <div id="imageEditStage" class="image-edit-stage">
@@ -299,52 +299,52 @@
                     </div>
                 </div>
                 <div class="image-edit-actions">
-                    <span id="imageEditZoomLabel" style="color:#94a3b8;font-size:11px;font-weight:800;padding:0 4px;margin-right:auto;cursor:pointer;user-select:none" title="鍙屽嚮閲嶇疆缂╂斁" ondblclick="resetImageEditZoom()">100%</span>
-                    <button class="image-edit-btn secondary" type="button" onclick="resetCropBox()"><i data-lucide="rotate-ccw" class="w-4 h-4"></i><span data-i18n="canvas.reset">閲嶇疆</span></button>
-                    <button class="image-edit-btn secondary" type="button" onclick="closeImageEditor()" data-i18n="common.cancel">鍙栨秷</button>
-                    <button id="imageEditApplyBtn" class="image-edit-btn primary" type="button" onclick="applyImageEdit()"><i data-lucide="crop" class="w-4 h-4"></i><span data-i18n="canvas.applyCrop">搴旂敤瑁佸壀</span></button>
+                    <span id="imageEditZoomLabel" style="color:#94a3b8;font-size:11px;font-weight:800;padding:0 4px;margin-right:auto;cursor:pointer;user-select:none" title="双击重置缩放" ondblclick="resetImageEditZoom()">100%</span>
+                    <button class="image-edit-btn secondary" type="button" onclick="resetCropBox()"><i data-lucide="rotate-ccw" class="w-4 h-4"></i><span data-i18n="canvas.reset">重置</span></button>
+                    <button class="image-edit-btn secondary" type="button" onclick="closeImageEditor()" data-i18n="common.cancel">取消</button>
+                    <button id="imageEditApplyBtn" class="image-edit-btn primary" type="button" onclick="applyImageEdit()"><i data-lucide="crop" class="w-4 h-4"></i><span data-i18n="canvas.applyCrop">应用裁剪</span></button>
                 </div>
             </div>
         </div>
         <div id="errorModal" class="error-modal" onclick="closeErrorModal()">
             <div class="error-panel" onclick="event.stopPropagation()">
                 <div class="error-head">
-                    <div id="errorTitle" class="error-title" data-i18n="canvas.generationFailed">鐢熸垚澶辫触</div>
-                    <button class="preview-icon-btn" type="button" title="鍏抽棴" aria-label="鍏抽棴" onclick="closeErrorModal()"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <div id="errorTitle" class="error-title" data-i18n="canvas.generationFailed">生成失败</div>
+                    <button class="preview-icon-btn" type="button" title="关闭" aria-label="关闭" onclick="closeErrorModal()"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <div id="errorMessage" class="error-message"></div>
                 <div class="error-actions">
-                    <button class="error-btn" type="button" onclick="copyErrorMessage()"><i data-lucide="copy" class="w-4 h-4"></i><span>澶嶅埗</span></button>
-                    <button class="error-btn primary" type="button" onclick="closeErrorModal()">鍏抽棴</button>
+                    <button class="error-btn" type="button" onclick="copyErrorMessage()"><i data-lucide="copy" class="w-4 h-4"></i><span>复制</span></button>
+                    <button class="error-btn primary" type="button" onclick="closeErrorModal()">关闭</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <aside class="rail-vert" id="libraryRail" aria-label="鑺傜偣搴?>
-        <button class="rail-btn" data-add="image" data-tip="鍥剧墖">
+    <aside class="rail-vert" id="libraryRail" aria-label="节点库">
+        <button class="rail-btn" data-add="image" data-tip="图片">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 14l5-4 4 3 5-5 4 3"/></svg>
         </button>
-        <button class="rail-btn" data-add="prompt" data-tip="鎻愮ず璇?>
+        <button class="rail-btn" data-add="prompt" data-tip="提示词">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 6h14M5 12h10M5 18h7"/></svg>
         </button>
-        <button class="rail-btn" data-add="loop" data-tip="寰幆">
+        <button class="rail-btn" data-add="loop" data-tip="循环">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3l4 4-4 4M21 7H9a4 4 0 0 0 0 8h2M7 21l-4-4 4-4M3 17h12a4 4 0 0 0 0-8h-2"/></svg>
         </button>
         <button class="rail-btn" data-add="llm" data-tip="LLM">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12Z"/></svg>
         </button>
         <span class="rail-divider"></span>
-        <button class="rail-btn" data-add="generator" data-tip="API 鐢熷浘">
+        <button class="rail-btn" data-add="generator" data-tip="API 生图">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3v4M3 5h4M19 17v4M17 19h4M12 8a4 4 0 0 0-4 4 4 4 0 0 0 8 0"/></svg>
         </button>
-        <button class="rail-btn" data-add="msgen" data-tip="MS 鐢熷浘">
+        <button class="rail-btn" data-add="msgen" data-tip="MS 生图">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18a5 5 0 0 1-1-9.9A6 6 0 0 1 18 9a4 4 0 0 1-1 7.9"/></svg>
         </button>
-        <button class="rail-btn" data-add="video" data-tip="瑙嗛">
+        <button class="rail-btn" data-add="video" data-tip="视频">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg>
         </button>
-        <button class="rail-btn" data-add="rh" data-tip="RH 鐢熸垚">
+        <button class="rail-btn" data-add="rh" data-tip="RH 生成">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/><path d="M9.5 9.5l5 5"/></svg>
         </button>
         <button class="rail-btn" data-add="comfy" data-tip="ComfyUI">
@@ -353,119 +353,119 @@
         <button class="rail-btn" data-add="ltxDirector" data-tip="LTX Director">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="1.5"/><path d="M10 10l5 3-5 3z"/></svg>
         </button>
-        <button class="rail-btn" data-add="output" data-tip="杈撳嚭">
+        <button class="rail-btn" data-add="output" data-tip="输出">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg>
         </button>
         <span class="rail-divider"></span>
-        <button class="rail-btn" data-add="group" data-tip="鍒嗙粍">
+        <button class="rail-btn" data-add="group" data-tip="分组">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
         </button>
         <span class="rail-divider"></span>
-        <button id="workflowTransferToggle" class="rail-btn" data-tip="宸ヤ綔娴?>
+        <button id="workflowTransferToggle" class="rail-btn" data-tip="工作流">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/><path d="M12 5a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/><path d="M18 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/><path d="M14 6l-6 8M6 17l4-3"/></svg>
         </button>
-        <button id="canvasAssetToggle" class="rail-btn canvas-asset-toggle" data-tip="璧勪骇搴?>
+        <button id="canvasAssetToggle" class="rail-btn canvas-asset-toggle" data-tip="资产库">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         </button>
-        <button id="canvasLogToggle" class="rail-btn" onclick="openCanvasLog(event)" data-tip="鏃ュ織">
+        <button id="canvasLogToggle" class="rail-btn" onclick="openCanvasLog(event)" data-tip="日志">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h10M8 12h10M8 18h7"/><rect x="3" y="3" width="3" height="3" rx=".5" fill="currentColor"/><rect x="3" y="9" width="3" height="3" rx=".5" fill="currentColor"/><rect x="3" y="15" width="3" height="3" rx=".5" fill="currentColor"/></svg>
         </button>
         <span class="rail-divider"></span>
-        <button id="libraryToggle" class="rail-btn" onclick="toggleLibraryPanel(event)" data-tip="搴?>
+        <button id="libraryToggle" class="rail-btn" onclick="toggleLibraryPanel(event)" data-tip="库">
             <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h16"/><rect x="6" y="4" width="4" height="4" rx=".5" fill="currentColor"/><rect x="14" y="4" width="4" height="4" rx=".5" fill="currentColor"/><rect x="6" y="10" width="4" height="4" rx=".5" fill="currentColor"/><rect x="14" y="10" width="4" height="4" rx=".5" fill="currentColor"/><rect x="6" y="16" width="4" height="4" rx=".5" fill="currentColor"/><rect x="14" y="16" width="4" height="4" rx=".5" fill="currentColor"/></svg>
         </button>
     </aside>
-    <aside class="panel library" id="libraryPanel" aria-label="鑺傜偣搴撹鎯?>
+    <aside class="panel library" id="libraryPanel" aria-label="节点库详情">
         <div class="library__head">
-            <div class="library__title">鑺傜偣搴?/div>
+            <div class="library__title">节点库</div>
             <div class="library__search">
                 <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="6"/><path d="m20 20-3.5-3.5"/></svg>
-                <input type="text" placeholder="鎼滅储鑺傜偣鈥? id="librarySearch">
+                <input type="text" placeholder="搜索节点…" id="librarySearch">
             </div>
         </div>
         <div class="library__body">
             <div class="lib-group">
-                <div class="lib-group__head">鏁版嵁</div>
+                <div class="lib-group__head">数据</div>
                 <button class="lib-item" data-add="image">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 14l5-4 4 3 5-5 4 3"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">鍥剧墖</span><span class="lib-item__hint">鎷栧叆 / 涓婁紶 / 鐢熸垚</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">图片</span><span class="lib-item__hint">拖入 / 上传 / 生成</span></span>
                 </button>
                 <button class="lib-item" data-add="prompt">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 6h14M5 12h10M5 18h7"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">鎻愮ず璇?/span><span class="lib-item__hint">澶氳鏂囨湰</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">提示词</span><span class="lib-item__hint">多行文本</span></span>
                 </button>
             </div>
             <div class="lib-group">
-                <div class="lib-group__head">鐢熸垚</div>
+                <div class="lib-group__head">生成</div>
                 <button class="lib-item" data-add="generator">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 3v4M3 5h4M19 17v4M17 19h4M12 8a4 4 0 0 0-4 4 4 4 0 0 0 8 0"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">API 鐢熷浘</span><span class="lib-item__hint">Flux / SD / Z-Image</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">API 生图</span><span class="lib-item__hint">Flux / SD / Z-Image</span></span>
                 </button>
                 <button class="lib-item" data-add="msgen">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18a5 5 0 0 1-1-9.9A6 6 0 0 1 18 9a4 4 0 0 1-1 7.9"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">ModelScope</span><span class="lib-item__hint">鍥藉唴 / 鍥藉 + LoRA</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">ModelScope</span><span class="lib-item__hint">国内 / 国外 + LoRA</span></span>
                 </button>
                 <button class="lib-item" data-add="video">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3z"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">瑙嗛鐢熸垚</span><span class="lib-item__hint">Sora / 鍙伒 / Vidu</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">视频生成</span><span class="lib-item__hint">Sora / 可灵 / Vidu</span></span>
                 </button>
                 <button class="lib-item" data-add="rh">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/><path d="M9.5 9.5l5 5"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">RH 鐢熸垚</span><span class="lib-item__hint">RunningHub</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">RH 生成</span><span class="lib-item__hint">RunningHub</span></span>
                 </button>
                 <button class="lib-item" data-add="comfy">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h8M6 8v8M18 8v8M8 18h8"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">ComfyUI</span><span class="lib-item__hint">澶栭儴宸ヤ綔娴?/span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">ComfyUI</span><span class="lib-item__hint">外部工作流</span></span>
                 </button>
                 <button class="lib-item" data-add="ltxDirector">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="1.5"/><path d="M10 10l5 3-5 3z"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">LTX Director</span><span class="lib-item__hint">瑙嗛瀵兼紨</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">LTX Director</span><span class="lib-item__hint">视频导演</span></span>
                 </button>
             </div>
             <div class="lib-group">
-                <div class="lib-group__head">閫昏緫</div>
+                <div class="lib-group__head">逻辑</div>
                 <button class="lib-item" data-add="llm">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12Z"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">LLM</span><span class="lib-item__hint">鏀瑰啓 / 鎵╁啓 / 鍒嗙被</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">LLM</span><span class="lib-item__hint">改写 / 扩写 / 分类</span></span>
                 </button>
                 <button class="lib-item" data-add="loop">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 3l4 4-4 4M21 7H9a4 4 0 0 0 0 8h2M7 21l-4-4 4-4M3 17h12a4 4 0 0 0 0-8h-2"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">寰幆</span><span class="lib-item__hint">鎵归噺 + 璁℃暟 token</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">循环</span><span class="lib-item__hint">批量 + 计数 token</span></span>
                 </button>
             </div>
             <div class="lib-group">
-                <div class="lib-group__head">杈撳嚭</div>
+                <div class="lib-group__head">输出</div>
                 <button class="lib-item" data-add="output">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">杈撳嚭</span><span class="lib-item__hint">閾惧熬 / 鏀堕泦</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">输出</span><span class="lib-item__hint">链尾 / 收集</span></span>
                 </button>
             </div>
             <div class="lib-group">
-                <div class="lib-group__head">鎿嶄綔</div>
+                <div class="lib-group__head">操作</div>
                 <button class="lib-item" data-add="group">
                     <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg></span>
-                    <span class="lib-item__text"><span class="lib-item__title">鍒嗙粍</span><span class="lib-item__hint">閫変腑鑺傜偣鍒嗙粍</span></span>
+                    <span class="lib-item__text"><span class="lib-item__title">分组</span><span class="lib-item__hint">选中节点分组</span></span>
                 </button>
                 <div class="lib-group" style="border-top:1px solid var(--line);padding-top:6px;margin-top:4px">
-                    <div class="lib-group__head">闈㈡澘</div>
+                    <div class="lib-group__head">面板</div>
                     <button class="lib-item" data-panel="workflowTransferToggle" onclick="document.getElementById('workflowTransferToggle')?.click()">
                         <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/><path d="M12 5a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/><path d="M18 17a2 2 0 1 0 4 0 2 2 0 0 0-4 0z"/><path d="M14 6l-6 8M6 17l4-3"/></svg></span>
-                        <span class="lib-item__text"><span class="lib-item__title">宸ヤ綔娴?/span><span class="lib-item__hint">浼犺緭闈㈡澘</span></span>
+                        <span class="lib-item__text"><span class="lib-item__title">工作流</span><span class="lib-item__hint">传输面板</span></span>
                     </button>
                     <button class="lib-item" data-panel="canvasAssetToggle" onclick="document.getElementById('canvasAssetToggle')?.click()">
                         <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>
-                        <span class="lib-item__text"><span class="lib-item__title">璧勪骇搴?/span><span class="lib-item__hint">鍥剧墖绱犳潗绠＄悊</span></span>
+                        <span class="lib-item__text"><span class="lib-item__title">资产库</span><span class="lib-item__hint">图片素材管理</span></span>
                     </button>
                     <button class="lib-item" data-panel="canvasLogToggle" onclick="document.getElementById('canvasLogToggle')?.click()">
                         <span class="lib-item__icon"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h10M8 12h10M8 18h7"/><rect x="3" y="3" width="3" height="3" rx=".5" fill="currentColor"/><rect x="3" y="9" width="3" height="3" rx=".5" fill="currentColor"/><rect x="3" y="15" width="3" height="3" rx=".5" fill="currentColor"/></svg></span>
-                        <span class="lib-item__text"><span class="lib-item__title">鏃ュ織</span><span class="lib-item__hint">杩愯鏃ュ織闈㈡澘</span></span>
+                        <span class="lib-item__text"><span class="lib-item__title">日志</span><span class="lib-item__hint">运行日志面板</span></span>
                     </button>
                 </div>
             </div>
         </div>
     </aside>
 
-    <script src="/static/js/ltx-director-timeline.js?v=2026.08.06.6"></script>
-    <script src="/static/js/canvas.js?v=2026.08.06.6"></script>
+    <script src="/static/js/ltx-director-timeline.js?v=2026.08.06.5"></script>
+    <script src="/static/js/canvas.js?v=2026.08.06.5"></script>
 </body>
 </html>
