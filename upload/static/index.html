@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
@@ -23,13 +23,13 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.08.06.5"></script>
-    <script src="/static/js/theme.js?v=2026.08.06.5"></script>
-    <script src="/static/js/i18n.js?v=2026.08.06.5"></script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.08.06.6"></script>
+    <script src="/static/js/theme.js?v=2026.08.06.6"></script>
+    <script src="/static/js/i18n.js?v=2026.08.06.6"></script>
     <style>
-        @import url('/static/vendor/css/fonts.css?v=2026.08.06.5');
+        @import url('/static/vendor/css/fonts.css?v=2026.08.06.6');
 
-        /* 本地 Tailwind 工具类兜底：CDN 慢/未就绪时也能立刻给图标尺寸，避免首屏左侧栏空白 */
+        /* 鏈湴 Tailwind 宸ュ叿绫诲厹搴曪細CDN 鎱?鏈氨缁椂涔熻兘绔嬪埢缁欏浘鏍囧昂瀵革紝閬垮厤棣栧睆宸︿晶鏍忕┖鐧?*/
         .w-1\.5 { width: 0.375rem; }
         .h-1\.5 { height: 0.375rem; }
         .w-4 { width: 1rem; }
@@ -80,7 +80,7 @@
             --scrollbar-hover: #475569;
         }
 
-        /* 极简滚动条 */
+        /* 鏋佺畝婊氬姩鏉?*/
         html,
         body {
             overscroll-behavior: auto;
@@ -140,7 +140,7 @@
             transition: background 0.3s;
         }
 
-        /* ===== 顶部横条 ===== */
+        /* ===== 椤堕儴妯潯 ===== */
         .topbar {
             height: 52px;
             min-height: 52px;
@@ -288,7 +288,7 @@
             justify-content: center;
             cursor: pointer;
             flex: 0 0 auto;
-            /* 仅保留 hover 真正会用到的属性过渡，避免 transition: all 因首屏属性补齐被意外触发 */
+            /* 浠呬繚鐣?hover 鐪熸浼氱敤鍒扮殑灞炴€ц繃娓★紝閬垮厤 transition: all 鍥犻灞忓睘鎬цˉ榻愯鎰忓瑙﹀彂 */
             transition: transform 0.6s var(--fluid-ease) 0.5s, border-radius 0.6s var(--fluid-ease) 0.5s, border-color 0.3s, background-color .18s, box-shadow .2s;
         }
 
@@ -324,7 +324,7 @@
             transition: transform .16s ease, background-color .16s ease, box-shadow .16s ease;
         }
 
-        /* 主舞台区 */
+        /* 涓昏垶鍙板尯 */
         .stage {
             flex: 1;
             background: var(--stage-bg);
@@ -351,7 +351,7 @@
             pointer-events: auto;
         }
 
-        /* 左下角监视器 */
+        /* 宸︿笅瑙掔洃瑙嗗櫒 */
         .nano-monitor {
             position: absolute;
             bottom: 24px;
@@ -439,7 +439,7 @@
 
 
 
-        /* 设置弹窗 */
+        /* 璁剧疆寮圭獥 */
         #settings-modal-panel {
             width:min(500px,100%);
             max-height:min(600px,calc(100vh-48px));
@@ -514,7 +514,7 @@
             flex-direction:column;
         }
 
-        /* 关于页面 */
+        /* 鍏充簬椤甸潰 */
         .about-section {
             flex:1;
             display:flex;
@@ -684,7 +684,7 @@
         .update-modal-summary.warn .update-modal-dot { background:#f59e0b; }
         .update-modal-summary.fail .update-modal-dot { background:#ef4444; }
 
-        /* 更新弹窗：双卡片需要更宽的面板，避免左右布局被裁剪 */
+        /* 鏇存柊寮圭獥锛氬弻鍗＄墖闇€瑕佹洿瀹界殑闈㈡澘锛岄伩鍏嶅乏鍙冲竷灞€琚鍓?*/
         #project-update-modal .studio-modal-panel { width:min(880px, 100%); max-height:min(840px, calc(100vh - 48px)); }
         .update-notes-box { margin:2px 0 14px; padding:12px; border:1px solid #e5e7eb; border-radius:8px; background:#fbfdff; }
         .update-notes-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px; }
@@ -992,7 +992,7 @@
     <div class="app-shell">
         <header class="topbar">
             <div class="topbar-left">
-                <button class="logo-ring" id="sidebarLogoToggle" type="button" onclick="switchUI(null, 'canvas')" title="回到画布">
+                <button class="logo-ring" id="sidebarLogoToggle" type="button" onclick="switchUI(null, 'canvas')" title="鍥炲埌鐢诲竷">
                     <div class="w-1.5 h-1.5 rounded-full transition-colors" id="logo-dot" style="background:var(--text)"></div>
                 </button>
                 <button class="topbar-nav active" data-page="canvas" onclick="switchUI(this, 'canvas')">
@@ -1002,7 +1002,7 @@
                         <rect x="14" y="14" width="7" height="7"></rect>
                         <rect x="3" y="14" width="7" height="7"></rect>
                     </svg>
-                    <span data-i18n="nav.canvas">画布</span>
+                    <span data-i18n="nav.canvas">鐢诲竷</span>
                 </button>
                 <button class="topbar-nav" data-page="asset-manager" onclick="switchUI(this, 'asset-manager')">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1011,7 +1011,7 @@
                         <path d="M7 12h10"></path>
                         <path d="M7 16h6"></path>
                     </svg>
-                    <span data-i18n="nav.assetManager">素材库</span>
+                    <span data-i18n="nav.assetManager">绱犳潗搴?/span>
                 </button>
                 <button class="topbar-nav" data-page="comfyui-settings" onclick="switchUI(this, 'comfyui-settings')">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1034,7 +1034,7 @@
                 </button>
             </div>
             <div class="topbar-right">
-                <button class="topbar-btn" onclick="toggleTheme()" id="theme-toggle-btn" type="button" title="切换夜间模式">
+                <button class="topbar-btn" onclick="toggleTheme()" id="theme-toggle-btn" type="button" title="鍒囨崲澶滈棿妯″紡">
                     <svg id="icon-moon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
@@ -1051,9 +1051,9 @@
                     </svg>
                 </button>
                 <button class="topbar-btn topbar-lang" onclick="toggleLanguage()" id="lang-toggle-btn" type="button" title="Language">
-                    <span id="lang-label">中</span>
+                    <span id="lang-label">涓?/span>
                 </button>
-                <button id="settings-gear-btn" class="topbar-btn" onclick="openSettingsModal()" type="button" title="设置">
+                <button id="settings-gear-btn" class="topbar-btn" onclick="openSettingsModal()" type="button" title="璁剧疆">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"></circle>
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.36 1.08V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.08-.36H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .36-1.08V3a2 2 0 1 1 4 0v.09A1.65 1.65 0 0 0 15 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.22.38.58.69 1 .86.2.08.42.13.65.14H21a2 2 0 1 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15z"></path>
@@ -1063,24 +1063,24 @@
         </header>
 
         <main class="stage">
-            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.08.06.5" scrolling="yes"></iframe>
+            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.08.06.6" scrolling="yes"></iframe>
 
-            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=2026.08.06.5" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.08.06.5" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.08.06.5" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=2026.08.06.6" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.08.06.6" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.08.06.6" class="active" scrolling="yes"></iframe>
 
         </main>
     </div>
 
-    <!-- 设置弹窗 -->
+    <!-- 璁剧疆寮圭獥 -->
     <div id="settings-modal" class="studio-modal" hidden role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
         <div class="studio-modal-panel" id="settings-modal-panel">
             <div class="studio-modal-head">
                 <div>
-                    <div class="studio-modal-kicker" data-i18n="common.settings">设置</div>
-                    <h2 id="settings-modal-title" class="studio-modal-title">设置</h2>
+                    <div class="studio-modal-kicker" data-i18n="common.settings">璁剧疆</div>
+                    <h2 id="settings-modal-title" class="studio-modal-title">璁剧疆</h2>
                 </div>
-                <button class="studio-modal-close" type="button" onclick="closeSettingsModal()" title="关闭" aria-label="关闭">
+                <button class="studio-modal-close" type="button" onclick="closeSettingsModal()" title="鍏抽棴" aria-label="鍏抽棴">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1095,7 +1095,7 @@
                             <line x1="12" y1="16" x2="12" y2="12"></line>
                             <line x1="12" y1="8" x2="12.01" y2="8"></line>
                         </svg>
-                        <span data-i18n="common.about">关于</span>
+                        <span data-i18n="common.about">鍏充簬</span>
                     </button>
                 </div>
                 <div class="settings-content">
@@ -1109,27 +1109,27 @@
                             </div>
                             <div class="about-app-name">Infinite Canvas</div>
                             <div class="about-version version-label" id="settings-version-label"></div>
-                            <div class="about-desc" data-i18n="common.appDesc">AI 绘画工作流管理工具</div>
+                            <div class="about-desc" data-i18n="common.appDesc">AI 缁樼敾宸ヤ綔娴佺鐞嗗伐鍏?/div>
                             <div class="about-actions">
                                 <button class="studio-modal-btn" onclick="openProjectPage()" type="button">
                                     <svg fill="currentColor" stroke="none" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
                                         <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.05c-3.34.73-4.04-1.42-4.04-1.42-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.74.08-.74 1.21.09 1.85 1.25 1.85 1.25 1.07 1.83 2.81 1.3 3.5.99.11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.12-.3-.54-1.53.12-3.18 0 0 1.01-.32 3.3 1.23a11.45 11.45 0 0 1 6.01 0c2.29-1.55 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.49 5.93.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.57A12 12 0 0 0 12 .5Z"></path>
                                     </svg>
-                                    <span data-i18n="common.project">项目主页</span>
+                                    <span data-i18n="common.project">椤圭洰涓婚〉</span>
                                 </button>
                                 <button id="update-app-btn" class="studio-modal-btn" type="button" onclick="checkElectronUpdate()" style="display:none">
                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15">
                                         <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
                                         <path d="M21 3v6h-6"></path>
                                     </svg>
-                                    <span id="update-app-text">检查更新</span>
+                                    <span id="update-app-text">妫€鏌ユ洿鏂?/span>
                                 </button>
                                 <button id="update-now-settings-btn" class="studio-modal-btn" onclick="openProjectUpdateModal()" type="button" style="display:none">
                                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="width:14px;height:14px">
                                         <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
                                         <path d="M21 3v6h-6"></path>
                                     </svg>
-                                    <span id="update-now-settings-text">一键更新</span>
+                                    <span id="update-now-settings-text">涓€閿洿鏂?/span>
                                 </button>
                             </div>
                         </div>
@@ -1160,7 +1160,7 @@
             const btn = document.getElementById('update-app-btn');
             const text = document.getElementById('update-app-text');
             if(!window.electronAPI) return;
-            text.textContent = '检查中…';
+            text.textContent = '妫€鏌ヤ腑鈥?;
             btn.disabled = true;
             window.electronAPI.checkForUpdate();
         }
@@ -1170,26 +1170,26 @@
                 const btn = document.getElementById('update-app-btn');
                 const text = document.getElementById('update-app-text');
                 if(status.type === 'checking') {
-                    text.textContent = '检查中…';
+                    text.textContent = '妫€鏌ヤ腑鈥?;
                 } else if(status.type === 'available') {
-                    text.textContent = '下载 v' + status.version;
-                    btn.onclick = function() { window.electronAPI.downloadUpdate(); text.textContent = '下载中…'; btn.disabled = true; };
+                    text.textContent = '涓嬭浇 v' + status.version;
+                    btn.onclick = function() { window.electronAPI.downloadUpdate(); text.textContent = '涓嬭浇涓€?; btn.disabled = true; };
                     btn.disabled = false;
                 } else if(status.type === 'downloading') {
-                    text.textContent = '下载中 ' + status.percent + '%';
+                    text.textContent = '涓嬭浇涓?' + status.percent + '%';
                 } else if(status.type === 'downloaded') {
-                    text.textContent = '安装更新 v' + status.version;
+                    text.textContent = '瀹夎鏇存柊 v' + status.version;
                     btn.onclick = function() { window.electronAPI.installUpdate(); };
                     btn.disabled = false;
                 } else if(status.type === 'not-available') {
-                    text.textContent = '已是最新版本';
+                    text.textContent = '宸叉槸鏈€鏂扮増鏈?;
                     btn.disabled = true;
-                    setTimeout(function(){ text.textContent = '检查更新'; btn.disabled = false; btn.onclick = checkElectronUpdate; }, 3000);
+                    setTimeout(function(){ text.textContent = '妫€鏌ユ洿鏂?; btn.disabled = false; btn.onclick = checkElectronUpdate; }, 3000);
                 } else if(status.type === 'error') {
-                    text.textContent = '检查失败';
+                    text.textContent = '妫€鏌ュけ璐?;
                     btn.disabled = false;
                     btn.onclick = checkElectronUpdate;
-                    setTimeout(function(){ text.textContent = '检查更新'; }, 3000);
+                    setTimeout(function(){ text.textContent = '妫€鏌ユ洿鏂?; }, 3000);
                 }
             });
         }
@@ -1199,10 +1199,10 @@
         <div class="studio-modal-panel">
             <div class="studio-modal-head">
                 <div>
-                    <div class="studio-modal-kicker" data-i18n="update.available">发现更新</div>
-                    <h2 id="project-update-title" class="studio-modal-title">一键更新</h2>
+                    <div class="studio-modal-kicker" data-i18n="update.available">鍙戠幇鏇存柊</div>
+                    <h2 id="project-update-title" class="studio-modal-title">涓€閿洿鏂?/h2>
                 </div>
-                <button class="studio-modal-close" type="button" onclick="closeProjectUpdateModal()" title="关闭" aria-label="关闭">
+                <button class="studio-modal-close" type="button" onclick="closeProjectUpdateModal()" title="鍏抽棴" aria-label="鍏抽棴">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
                         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -1213,24 +1213,24 @@
                 <p id="project-update-copy" class="studio-modal-copy"></p>
                 <div id="project-update-notes" class="update-notes-box" hidden>
                     <div class="update-notes-head">
-                        <strong id="project-update-notes-title">本次更新内容</strong>
+                        <strong id="project-update-notes-title">鏈鏇存柊鍐呭</strong>
                         <span id="project-update-notes-version" class="update-notes-version"></span>
                     </div>
                     <ol id="project-update-notes-list" class="update-notes-list"></ol>
-                    <p id="project-update-notes-empty" class="update-notes-empty" hidden>暂未获取到更新说明。</p>
+                    <p id="project-update-notes-empty" class="update-notes-empty" hidden>鏆傛湭鑾峰彇鍒版洿鏂拌鏄庛€?/p>
                 </div>
                 <div id="update-source-list" class="update-source-list">
                     <button id="update-source-github" class="update-source-card" type="button" data-update-source="github" onclick="setUpdateSource('github')">
                         <div class="update-source-head">
                             <div class="update-source-title">
-                                <strong>GitHub 下载源</strong>
-                                <span>GitHub API / raw 文件 / GitHub 网页，Google 仅作外网参考。</span>
+                                <strong>GitHub 涓嬭浇婧?/strong>
+                                <span>GitHub API / raw 鏂囦欢 / GitHub 缃戦〉锛孏oogle 浠呬綔澶栫綉鍙傝€冦€?/span>
                             </div>
                             <div class="update-source-head-right">
                                 <span class="update-source-check" aria-hidden="true">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </span>
-                                <span class="update-source-badge">待测试</span>
+                                <span class="update-source-badge">寰呮祴璇?/span>
                             </div>
                         </div>
                         <div class="connectivity-list" data-connectivity-source="github"></div>
@@ -1238,14 +1238,14 @@
                     <button id="update-source-modelscope" class="update-source-card" type="button" data-update-source="modelscope" onclick="setUpdateSource('modelscope')">
                         <div class="update-source-head">
                             <div class="update-source-title">
-                                <strong>ModelScope 下载源</strong>
-                                <span>ModelScope 空间与版本文件，适合国内网络。</span>
+                                <strong>ModelScope 涓嬭浇婧?/strong>
+                                <span>ModelScope 绌洪棿涓庣増鏈枃浠讹紝閫傚悎鍥藉唴缃戠粶銆?/span>
                             </div>
                             <div class="update-source-head-right">
                                 <span class="update-source-check" aria-hidden="true">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </span>
-                                <span class="update-source-badge">待测试</span>
+                                <span class="update-source-badge">寰呮祴璇?/span>
                             </div>
                         </div>
                         <div class="connectivity-list" data-connectivity-source="modelscope"></div>
@@ -1254,7 +1254,7 @@
                 <div id="project-update-summary" class="update-modal-summary warn">
                     <span class="update-modal-dot" aria-hidden="true"></span>
                     <div>
-                        <strong id="project-update-summary-title">建议先测试连通性</strong>
+                        <strong id="project-update-summary-title">寤鸿鍏堟祴璇曡繛閫氭€?/strong>
                         <span id="project-update-summary-text"></span>
                     </div>
                 </div>
@@ -1265,17 +1265,17 @@
                         <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
                         <path d="M21 3v6h-6"></path>
                     </svg>
-                    <span id="connectivity-test-text">测试连通性</span>
+                    <span id="connectivity-test-text">娴嬭瘯杩為€氭€?/span>
                 </button>
                 <button class="studio-modal-btn" type="button" onclick="closeProjectUpdateModal()">
-                    <span id="project-update-cancel-text">取消</span>
+                    <span id="project-update-cancel-text">鍙栨秷</span>
                 </button>
                 <button id="project-update-confirm-btn" class="studio-modal-btn primary" type="button" onclick="confirmProjectUpdate()">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
                         <path d="M21 3v6h-6"></path>
                     </svg>
-                    <span id="project-update-confirm-text">开始更新</span>
+                    <span id="project-update-confirm-text">寮€濮嬫洿鏂?/span>
                 </button>
             </div>
         </div>
@@ -1300,8 +1300,7 @@
         let appInfo = { version:'', repo_url:PROJECT_URL, version_url:'https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main/VERSION' };
         let updateConnectivityResult = null;
         let projectUpdateRunning = false;
-        let projectUpdateAbort = null;  // 当前更新请求的 AbortController，便于用户中途取消
-        let updateSource = localStorage.getItem('studio_update_source') || 'github';
+        let projectUpdateAbort = null;  // 褰撳墠鏇存柊璇锋眰鐨?AbortController锛屼究浜庣敤鎴蜂腑閫斿彇娑?        let updateSource = localStorage.getItem('studio_update_source') || 'github';
         let projectUpdateNotes = null;
 
         function resetStudioRootScroll() {
@@ -1326,8 +1325,7 @@
                 syncLanguageToFrame(target);
             }
             if(!options.skipRemember) localStorage.setItem(ACTIVE_PAGE_KEY, id);
-            // 切换到画布时通知刷新工作流列表（防止在 comfyui-settings 修改后画布未及时更新）
-            if (id === 'canvas' && target && target.src) {
+            // 鍒囨崲鍒扮敾甯冩椂閫氱煡鍒锋柊宸ヤ綔娴佸垪琛紙闃叉鍦?comfyui-settings 淇敼鍚庣敾甯冩湭鍙婃椂鏇存柊锛?            if (id === 'canvas' && target && target.src) {
                 try { target.contentWindow?.postMessage({ type: 'canvas-focus' }, '*'); } catch(e) {}
             }
             resetStudioRootScroll();
@@ -1409,7 +1407,7 @@
             setInterval(syncStatus, 2000);
         }
 
-        // --- 夜间模式 ---
+        // --- 澶滈棿妯″紡 ---
 
         function syncThemeToFrame(iframe) {
             const theme = (window.StudioTheme || {get: () => 'light'}).get();
@@ -1452,7 +1450,7 @@
             window.StudioI18n.toggle();
             document.querySelectorAll('iframe').forEach(frame => syncLanguageToFrame(frame));
             const label = document.querySelector('#lang-label');
-            if(label) label.textContent = window.StudioI18n?.lang?.() === 'en' ? 'EN' : '中';
+            if(label) label.textContent = window.StudioI18n?.lang?.() === 'en' ? 'EN' : '涓?;
             updateProjectUpdateTitle();
             refreshUpdateButtonText();
             refreshProjectUpdateModalText();
@@ -1485,7 +1483,7 @@
             if(window.StudioI18n) {
                 window.StudioI18n.apply();
                 const label = document.querySelector('#lang-label');
-                if(label) label.textContent = window.StudioI18n.lang() === 'en' ? 'EN' : '中';
+                if(label) label.textContent = window.StudioI18n.lang() === 'en' ? 'EN' : '涓?;
             }
             broadcastLanguage();
             checkForUpdates();
@@ -1545,7 +1543,7 @@
             const isEn = window.StudioI18n?.lang?.() === 'en';
             text.removeAttribute('data-i18n');
             if(remoteVersion) {
-                const prefix = isEn ? 'Update to' : '更新到';
+                const prefix = isEn ? 'Update to' : '鏇存柊鍒?;
                 text.replaceChildren();
                 const prefixSpan = document.createElement('span');
                 prefixSpan.className = 'update-action-prefix';
@@ -1559,7 +1557,7 @@
                 text.append(prefixSpan, compactSpan, fullSpan);
                 btn.setAttribute('aria-label', `${prefix} ${versionLabel(remoteVersion)}`);
             } else {
-                text.textContent = isEn ? 'Update' : '一键更新';
+                text.textContent = isEn ? 'Update' : '涓€閿洿鏂?;
                 btn.setAttribute('aria-label', text.textContent);
             }
         }
@@ -1571,8 +1569,8 @@
             const remoteVersion = appInfo.latestVersion;
             const updateBtn = document.getElementById('update-now-settings-btn');
             if(updateBtn) updateBtn.title = remoteVersion
-                ? (isEn ? `Update to ${versionLabel(remoteVersion)}` : `更新到 ${versionLabel(remoteVersion)}`)
-                : (isEn ? 'Update main.py and static files from GitHub' : '从 GitHub 更新 main.py 和 static 文件');
+                ? (isEn ? `Update to ${versionLabel(remoteVersion)}` : `鏇存柊鍒?${versionLabel(remoteVersion)}`)
+                : (isEn ? 'Update main.py and static files from GitHub' : '浠?GitHub 鏇存柊 main.py 鍜?static 鏂囦欢');
             refreshUpdateButtonText();
         }
 
@@ -1600,7 +1598,7 @@
             const isEn = window.StudioI18n?.lang?.() === 'en';
             const notes = projectUpdateNotes || {};
             const items = Array.isArray(notes.items) ? notes.items.filter(Boolean) : [];
-            if(titleEl) titleEl.textContent = isEn ? 'What changed' : '本次更新内容';
+            if(titleEl) titleEl.textContent = isEn ? 'What changed' : '鏈鏇存柊鍐呭';
             if(versionEl) versionEl.textContent = notes.version ? versionLabel(notes.version) : '';
             if(list) {
                 list.replaceChildren();
@@ -1615,20 +1613,20 @@
             const hasItems = !!(list && list.children.length);
             if(empty) {
                 empty.hidden = hasItems;
-                empty.textContent = isEn ? 'No update notes were found for this version.' : '暂未获取到这个版本的更新说明。';
+                empty.textContent = isEn ? 'No update notes were found for this version.' : '鏆傛湭鑾峰彇鍒拌繖涓増鏈殑鏇存柊璇存槑銆?;
             }
             box.hidden = !(notes.version || hasItems);
         }
 
         function describeNetworkError(err, isEn){
             const msg = String(err?.message || err || '');
-            const isNetwork = (err instanceof TypeError) || /Failed to fetch|NetworkError|ERR_|timed? ?out|超时|无法连接|GitHub|HTTP 4|HTTP 5/i.test(msg);
+            const isNetwork = (err instanceof TypeError) || /Failed to fetch|NetworkError|ERR_|timed? ?out|瓒呮椂|鏃犳硶杩炴帴|GitHub|HTTP 4|HTTP 5/i.test(msg);
             if(isNetwork){
                 return isEn
                     ? 'Cannot reach the selected update source. Check your network, proxy, or DNS, then try again.'
-                    : '无法连接当前选择的更新源。请检查网络、代理或 DNS 后重试。';
+                    : '鏃犳硶杩炴帴褰撳墠閫夋嫨鐨勬洿鏂版簮銆傝妫€鏌ョ綉缁溿€佷唬鐞嗘垨 DNS 鍚庨噸璇曘€?;
             }
-            return msg || (isEn ? 'Update failed' : '更新失败');
+            return msg || (isEn ? 'Update failed' : '鏇存柊澶辫触');
         }
 
         function updateUiText(zh, en) {
@@ -1668,25 +1666,25 @@
 
         function updateTargetLabel(name) {
             const labels = {
-                'GitHub 更新列表': ['GitHub 更新列表', 'GitHub update API'],
-                'GitHub 版本文件': ['GitHub 版本文件', 'GitHub version file'],
-                'GitHub 主页': ['GitHub 主页', 'GitHub home page'],
-                'ModelScope 更新列表': ['ModelScope 更新列表', 'ModelScope update list'],
-                'ModelScope 版本文件': ['ModelScope 版本文件', 'ModelScope version file'],
-                'ModelScope 空间页面': ['ModelScope 空间页面', 'ModelScope space page'],
-                'ModelScope 主页': ['ModelScope 主页', 'ModelScope home page'],
-                'Google 连通性': ['Google 连通性', 'Google connectivity'],
+                'GitHub 鏇存柊鍒楄〃': ['GitHub 鏇存柊鍒楄〃', 'GitHub update API'],
+                'GitHub 鐗堟湰鏂囦欢': ['GitHub 鐗堟湰鏂囦欢', 'GitHub version file'],
+                'GitHub 涓婚〉': ['GitHub 涓婚〉', 'GitHub home page'],
+                'ModelScope 鏇存柊鍒楄〃': ['ModelScope 鏇存柊鍒楄〃', 'ModelScope update list'],
+                'ModelScope 鐗堟湰鏂囦欢': ['ModelScope 鐗堟湰鏂囦欢', 'ModelScope version file'],
+                'ModelScope 绌洪棿椤甸潰': ['ModelScope 绌洪棿椤甸潰', 'ModelScope space page'],
+                'ModelScope 涓婚〉': ['ModelScope 涓婚〉', 'ModelScope home page'],
+                'Google 杩為€氭€?: ['Google 杩為€氭€?, 'Google connectivity'],
             };
             const item = labels[name] || [name, name];
             return window.StudioI18n?.lang?.() === 'en' ? item[1] : item[0];
         }
 
         function updateStatusLabel(item) {
-            if(item.pending) return updateUiText('检测中...', 'Testing...');
-            if(item.ok) return `${updateUiText('正常', 'OK')} · ${item.elapsed_ms || 0}ms`;
-            if(item.timed_out) return updateUiText('失败 · 超时', 'Failed · timeout');
+            if(item.pending) return updateUiText('妫€娴嬩腑...', 'Testing...');
+            if(item.ok) return `${updateUiText('姝ｅ父', 'OK')} 路 ${item.elapsed_ms || 0}ms`;
+            if(item.timed_out) return updateUiText('澶辫触 路 瓒呮椂', 'Failed 路 timeout');
             if(item.status) return `HTTP ${item.status}`;
-            return updateUiText('失败', 'Failed');
+            return updateUiText('澶辫触', 'Failed');
         }
 
         function setUpdateSummary(kind, title, text) {
@@ -1706,13 +1704,13 @@
             const github = sources.github || {};
             const ms = sources.modelscope || {};
             return [
-                { name:'GitHub 更新列表', url:github.tree_url || appInfo.tree_url || 'https://api.github.com/repos/hero8152/Infinite-Canvas/git/trees/main?recursive=1', source:'github', required:true },
-                { name:'GitHub 版本文件', url:github.version_url || appInfo.version_url || 'https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main/VERSION', source:'github', required:true },
-                { name:'GitHub 主页', url:'https://github.com/', source:'github' },
-                { name:'ModelScope 版本文件', url:ms.version_url || 'https://www.modelscope.cn/api/v1/studio/Daniel8152/Infinite-Canvas/repo?Revision=master&FilePath=VERSION', source:'modelscope', required:true },
-                { name:'ModelScope 空间页面', url:ms.repo_url || 'https://modelscope.cn/studios/Daniel8152/Infinite-Canvas', source:'modelscope' },
-                { name:'ModelScope 主页', url:'https://modelscope.cn/', source:'modelscope' },
-                { name:'Google 连通性', url:'https://www.google.com/generate_204', source:'reference' },
+                { name:'GitHub 鏇存柊鍒楄〃', url:github.tree_url || appInfo.tree_url || 'https://api.github.com/repos/hero8152/Infinite-Canvas/git/trees/main?recursive=1', source:'github', required:true },
+                { name:'GitHub 鐗堟湰鏂囦欢', url:github.version_url || appInfo.version_url || 'https://raw.githubusercontent.com/hero8152/Infinite-Canvas/main/VERSION', source:'github', required:true },
+                { name:'GitHub 涓婚〉', url:'https://github.com/', source:'github' },
+                { name:'ModelScope 鐗堟湰鏂囦欢', url:ms.version_url || 'https://www.modelscope.cn/api/v1/studio/Daniel8152/Infinite-Canvas/repo?Revision=master&FilePath=VERSION', source:'modelscope', required:true },
+                { name:'ModelScope 绌洪棿椤甸潰', url:ms.repo_url || 'https://modelscope.cn/studios/Daniel8152/Infinite-Canvas', source:'modelscope' },
+                { name:'ModelScope 涓婚〉', url:'https://modelscope.cn/', source:'modelscope' },
+                { name:'Google 杩為€氭€?, url:'https://www.google.com/generate_204', source:'reference' },
             ];
         }
 
@@ -1737,7 +1735,7 @@
                 meta.append(name, url);
                 const status = document.createElement('div');
                 status.className = 'connectivity-status';
-                status.textContent = item.untouched ? updateUiText('待测试', 'Not tested') : updateStatusLabel(item);
+                status.textContent = item.untouched ? updateUiText('寰呮祴璇?, 'Not tested') : updateStatusLabel(item);
                 row.append(indicator, meta, status);
                 if(item.error && !item.timed_out) {
                     const error = document.createElement('div');
@@ -1757,8 +1755,8 @@
             const localVersion = appInfo.version || '';
             const sourceName = updateSourceLabel();
             const title = remoteVersion
-                ? updateUiText(`更新到 ${versionLabel(remoteVersion)}`, `Update to ${versionLabel(remoteVersion)}`)
-                : updateUiText('一键更新', 'One-click update');
+                ? updateUiText(`鏇存柊鍒?${versionLabel(remoteVersion)}`, `Update to ${versionLabel(remoteVersion)}`)
+                : updateUiText('涓€閿洿鏂?, 'One-click update');
             const titleEl = document.getElementById('project-update-title');
             const copyEl = document.getElementById('project-update-copy');
             const testText = document.getElementById('connectivity-test-text');
@@ -1775,60 +1773,60 @@
                 const badge = card.querySelector('.update-source-badge');
                 if(badge) {
                     if(!updateConnectivityResult) {
-                        setSourceBadge(badge, '', updateUiText('待测试', 'Not tested'));
+                        setSourceBadge(badge, '', updateUiText('寰呮祴璇?, 'Not tested'));
                     } else {
                         const stats = sourceConnectivityStats(source, updateConnectivityResult.results || []);
                         setSourceBadge(badge, stats.ok ? 'ok' : 'bad',
-                            stats.ok ? updateUiText('可用', 'Available') : updateUiText('不可用', 'Unavailable'));
+                            stats.ok ? updateUiText('鍙敤', 'Available') : updateUiText('涓嶅彲鐢?, 'Unavailable'));
                     }
                 }
             });
             if(copyEl) copyEl.textContent = updateUiText(
-                `将从 ${sourceName} 更新 main.py、VERSION 和 static 文件。更新前会自动备份，更新完成后后端会自动重启。当前 ${versionLabel(localVersion)}，最新 ${versionLabel(remoteVersion || localVersion)}。`,
+                `灏嗕粠 ${sourceName} 鏇存柊 main.py銆乂ERSION 鍜?static 鏂囦欢銆傛洿鏂板墠浼氳嚜鍔ㄥ浠斤紝鏇存柊瀹屾垚鍚庡悗绔細鑷姩閲嶅惎銆傚綋鍓?${versionLabel(localVersion)}锛屾渶鏂?${versionLabel(remoteVersion || localVersion)}銆俙,
                 `This updates main.py, VERSION, and static files from ${sourceName}. A backup is created first, then the backend restarts automatically. Current ${versionLabel(localVersion)}, latest ${versionLabel(remoteVersion || localVersion)}.`
             );
-            if(testText) testText.textContent = updateConnectivityResult ? updateUiText('重新测试', 'Retest') : updateUiText('测试连通性', 'Test connectivity');
-            if(cancelText) cancelText.textContent = updateUiText('取消', 'Cancel');
-            if(confirmText && !projectUpdateRunning) confirmText.textContent = updateUiText('开始更新', 'Start update');
+            if(testText) testText.textContent = updateConnectivityResult ? updateUiText('閲嶆柊娴嬭瘯', 'Retest') : updateUiText('娴嬭瘯杩為€氭€?, 'Test connectivity');
+            if(cancelText) cancelText.textContent = updateUiText('鍙栨秷', 'Cancel');
+            if(confirmText && !projectUpdateRunning) confirmText.textContent = updateUiText('寮€濮嬫洿鏂?, 'Start update');
             if(closeBtn) {
-                closeBtn.title = updateUiText('关闭', 'Close');
+                closeBtn.title = updateUiText('鍏抽棴', 'Close');
                 closeBtn.setAttribute('aria-label', closeBtn.title);
             }
             if(!updateConnectivityResult) {
                 setUpdateSummary(
                     'warn',
-                    updateUiText('建议先测试连通性', 'Connectivity test recommended'),
+                    updateUiText('寤鸿鍏堟祴璇曡繛閫氭€?, 'Connectivity test recommended'),
                     updateUiText(
-                        '测试会同时测速 GitHub 和 ModelScope。你可以根据结果切换下载源。',
+                        '娴嬭瘯浼氬悓鏃舵祴閫?GitHub 鍜?ModelScope銆備綘鍙互鏍规嵁缁撴灉鍒囨崲涓嬭浇婧愩€?,
                         'The test checks both GitHub and ModelScope. Choose the faster reachable source before updating.'
                     )
                 );
             } else if(updateConnectivityResult.backend_missing) {
                 setUpdateSummary(
                     'fail',
-                    updateUiText('需要重启后端', 'Backend restart required'),
+                    updateUiText('闇€瑕侀噸鍚悗绔?, 'Backend restart required'),
                     updateUiText(
-                        '当前页面已经更新，但后端仍是旧版本，所以找不到连通性测试接口。请重启服务后再试。',
+                        '褰撳墠椤甸潰宸茬粡鏇存柊锛屼絾鍚庣浠嶆槸鏃х増鏈紝鎵€浠ユ壘涓嶅埌杩為€氭€ф祴璇曟帴鍙ｃ€傝閲嶅惎鏈嶅姟鍚庡啀璇曘€?,
                         'The page is updated, but the backend is still the old version and cannot find the connectivity-test API. Restart the service and try again.'
                     )
                 );
             } else if((updateConnectivityResult.sources || {})[updateSource]?.ok || (updateSource === 'github' && updateConnectivityResult.ok)) {
-                const google = (updateConnectivityResult.results || []).find(item => item.name === 'Google 连通性');
+                const google = (updateConnectivityResult.results || []).find(item => item.name === 'Google 杩為€氭€?);
                 const sourceResults = (updateConnectivityResult.results || []).filter(item => item.source === updateSource);
                 const fastest = sourceResults.filter(item => item.ok).sort((a, b) => (a.elapsed_ms || 999999) - (b.elapsed_ms || 999999))[0];
                 setUpdateSummary(
                     google?.ok ? 'ok' : 'warn',
-                    updateUiText(`${sourceName} 下载源可用`, `${sourceName} source reachable`),
+                    updateUiText(`${sourceName} 涓嬭浇婧愬彲鐢╜, `${sourceName} source reachable`),
                     fastest
-                        ? updateUiText(`${sourceName} 可访问，最快节点约 ${fastest.elapsed_ms || 0}ms，可以开始更新。`, `${sourceName} is reachable; fastest endpoint is about ${fastest.elapsed_ms || 0}ms.`)
-                        : updateUiText(`${sourceName} 更新节点可用，可以开始更新。`, `${sourceName} update endpoints are reachable.`)
+                        ? updateUiText(`${sourceName} 鍙闂紝鏈€蹇妭鐐圭害 ${fastest.elapsed_ms || 0}ms锛屽彲浠ュ紑濮嬫洿鏂般€俙, `${sourceName} is reachable; fastest endpoint is about ${fastest.elapsed_ms || 0}ms.`)
+                        : updateUiText(`${sourceName} 鏇存柊鑺傜偣鍙敤锛屽彲浠ュ紑濮嬫洿鏂般€俙, `${sourceName} update endpoints are reachable.`)
                 );
             } else {
                 setUpdateSummary(
                     'fail',
-                    updateUiText(`${sourceName} 下载源不可用`, `${sourceName} source unreachable`),
+                    updateUiText(`${sourceName} 涓嬭浇婧愪笉鍙敤`, `${sourceName} source unreachable`),
                     updateUiText(
-                        `当前网络无法访问 ${sourceName} 必需节点。请切换下载源，或检查代理、DNS 后重试。`,
+                        `褰撳墠缃戠粶鏃犳硶璁块棶 ${sourceName} 蹇呴渶鑺傜偣銆傝鍒囨崲涓嬭浇婧愶紝鎴栨鏌ヤ唬鐞嗐€丏NS 鍚庨噸璇曘€俙,
                         `This network cannot reach required ${sourceName} endpoints. Switch source, or check proxy/DNS and try again.`
                     )
                 );
@@ -1846,8 +1844,7 @@
         }
 
         function closeProjectUpdateModal() {
-            // 更新进行中允许关闭：中止在途请求并恢复 UI，避免「卡在更新中、无法关闭」
-            if(projectUpdateRunning) {
+            // 鏇存柊杩涜涓厑璁稿叧闂細涓鍦ㄩ€旇姹傚苟鎭㈠ UI锛岄伩鍏嶃€屽崱鍦ㄦ洿鏂颁腑銆佹棤娉曞叧闂€?            if(projectUpdateRunning) {
                 try { projectUpdateAbort?.abort(); } catch(e) {}
             }
             const modal = document.getElementById('project-update-modal');
@@ -1897,29 +1894,27 @@
                 if(!items.length) return;
                 const done = items.filter(it => !it.pending && !it.untouched);
                 if(done.length < items.length) {
-                    setSourceBadge(badge, '', updateUiText(`检测中 ${done.length}/${items.length}`, `${done.length}/${items.length}`));
+                    setSourceBadge(badge, '', updateUiText(`妫€娴嬩腑 ${done.length}/${items.length}`, `${done.length}/${items.length}`));
                     return;
                 }
                 const stats = sourceConnectivityStats(source, results);
                 setSourceBadge(badge, stats.ok ? 'ok' : 'bad',
-                    stats.ok ? updateUiText('可用', 'Available') : updateUiText('不可用', 'Unavailable'));
+                    stats.ok ? updateUiText('鍙敤', 'Available') : updateUiText('涓嶅彲鐢?, 'Unavailable'));
             });
         }
 
         let connectivityTesting = false;
         async function runUpdateConnectivityTest() {
-            if(connectivityTesting) return; // 防止重复点击导致状态错乱
-            const isEn = window.StudioI18n?.lang?.() === 'en';
+            if(connectivityTesting) return; // 闃叉閲嶅鐐瑰嚮瀵艰嚧鐘舵€侀敊涔?            const isEn = window.StudioI18n?.lang?.() === 'en';
             const btn = document.getElementById('connectivity-test-btn');
             const text = document.getElementById('connectivity-test-text');
             connectivityTesting = true;
             if(btn) btn.disabled = true;
-            if(text) text.textContent = isEn ? 'Testing...' : '检测中...';
+            if(text) text.textContent = isEn ? 'Testing...' : '妫€娴嬩腑...';
             updateConnectivityResult = null;
 
             const targets = updateConnectivityTargets();
-            // 实时状态数组：先全部置为「检测中」，每条探测完成立即刷新对应行
-            const live = targets.map(item => ({...item, pending:true, untouched:false}));
+            // 瀹炴椂鐘舵€佹暟缁勶細鍏堝叏閮ㄧ疆涓恒€屾娴嬩腑銆嶏紝姣忔潯鎺㈡祴瀹屾垚绔嬪嵆鍒锋柊瀵瑰簲琛?            const live = targets.map(item => ({...item, pending:true, untouched:false}));
             let backendMissing = false;
             const applyResult = (name, patch) => {
                 const i = live.findIndex(x => x.name === name);
@@ -1930,25 +1925,23 @@
             };
 
             const probeOne = async (t) => {
-                // 客户端兜底超时：5s 探测 + 1s 网络余量，超时即报「超时」，不会永远卡在「检测中」
-                const ac = new AbortController();
+                // 瀹㈡埛绔厹搴曡秴鏃讹細5s 鎺㈡祴 + 1s 缃戠粶浣欓噺锛岃秴鏃跺嵆鎶ャ€岃秴鏃躲€嶏紝涓嶄細姘歌繙鍗″湪銆屾娴嬩腑銆?                const ac = new AbortController();
                 const killer = setTimeout(() => ac.abort(), 6000);
                 try {
                     const res = await fetch(`/api/update-connectivity/probe?name=${encodeURIComponent(t.name)}`, { cache:'no-store', signal:ac.signal });
                     const data = await res.json().catch(() => ({}));
-                    // 旧后端没有单条探测接口 → 404 Not Found，标记后回退到整体接口
-                    if(res.status === 404 && (data.detail === 'Not Found' || data.detail === undefined)) {
+                    // 鏃у悗绔病鏈夊崟鏉℃帰娴嬫帴鍙?鈫?404 Not Found锛屾爣璁板悗鍥為€€鍒版暣浣撴帴鍙?                    if(res.status === 404 && (data.detail === 'Not Found' || data.detail === undefined)) {
                         backendMissing = true;
                         return;
                     }
                     if(res.ok) {
                         applyResult(t.name, { ok:!!data.ok, status:data.status || 0, elapsed_ms:data.elapsed_ms || 0, error:data.error || '', timed_out:!!data.timed_out });
                     } else {
-                        applyResult(t.name, { ok:false, error:data.detail || (isEn ? 'Failed' : '失败') });
+                        applyResult(t.name, { ok:false, error:data.detail || (isEn ? 'Failed' : '澶辫触') });
                     }
                 } catch(e) {
                     if(e && e.name === 'AbortError') {
-                        applyResult(t.name, { ok:false, timed_out:true, error:isEn ? 'Timed out (over 5s)' : '连接超时（超过 5s）' });
+                        applyResult(t.name, { ok:false, timed_out:true, error:isEn ? 'Timed out (over 5s)' : '杩炴帴瓒呮椂锛堣秴杩?5s锛? });
                     } else {
                         applyResult(t.name, { ok:false, error:describeNetworkError(e, isEn) });
                     }
@@ -1958,14 +1951,13 @@
             };
 
             try {
-                setUpdateSummary('warn', isEn ? 'Testing connectivity' : '正在测试连通性', isEn ? 'Probing each endpoint — results stream in live.' : '正在逐条检测各节点，结果实时显示。');
+                setUpdateSummary('warn', isEn ? 'Testing connectivity' : '姝ｅ湪娴嬭瘯杩為€氭€?, isEn ? 'Probing each endpoint 鈥?results stream in live.' : '姝ｅ湪閫愭潯妫€娴嬪悇鑺傜偣锛岀粨鏋滃疄鏃舵樉绀恒€?);
                 renderConnectivityList(live);
                 renderSourceBadgesLive(live);
                 await Promise.all(targets.map(probeOne));
 
                 if(backendMissing) {
-                    // 兜底：尝试旧的整体接口
-                    try {
+                    // 鍏滃簳锛氬皾璇曟棫鐨勬暣浣撴帴鍙?                    try {
                         const res = await fetch('/api/update-connectivity', { cache:'no-store' });
                         const data = await res.json().catch(() => ({}));
                         if(res.ok && Array.isArray(data.results)) {
@@ -1976,7 +1968,7 @@
                     } catch(e) {}
                     const message = isEn
                         ? 'The backend has not loaded the new connectivity-test API yet. Restart the backend service, then test again.'
-                        : '后端还没有加载新的连通性测试接口。请重启服务后再测试。';
+                        : '鍚庣杩樻病鏈夊姞杞芥柊鐨勮繛閫氭€ф祴璇曟帴鍙ｃ€傝閲嶅惎鏈嶅姟鍚庡啀娴嬭瘯銆?;
                     updateConnectivityResult = {
                         ok:false,
                         backend_missing:true,
@@ -2008,12 +2000,11 @@
             if(btn) btn.disabled = true;
             if(confirmBtn) confirmBtn.disabled = true;
             if(testBtn) testBtn.disabled = true;
-            if(text) text.textContent = isEn ? 'Updating...' : '更新中...';
-            if(confirmText) confirmText.textContent = isEn ? 'Updating...' : '更新中...';
+            if(text) text.textContent = isEn ? 'Updating...' : '鏇存柊涓?..';
+            if(confirmText) confirmText.textContent = isEn ? 'Updating...' : '鏇存柊涓?..';
             const sourceName = updateSourceLabel();
-            setUpdateSummary('warn', isEn ? 'Updating' : '正在更新', isEn ? `Downloading files from ${sourceName} and creating a local backup.` : `正在从 ${sourceName} 下载文件，并创建本地备份。`);
-            // 客户端兜底超时：即使后端异常挂起，UI 也能恢复，不会永远停在「更新中」
-            const ac = new AbortController();
+            setUpdateSummary('warn', isEn ? 'Updating' : '姝ｅ湪鏇存柊', isEn ? `Downloading files from ${sourceName} and creating a local backup.` : `姝ｅ湪浠?${sourceName} 涓嬭浇鏂囦欢锛屽苟鍒涘缓鏈湴澶囦唤銆俙);
+            // 瀹㈡埛绔厹搴曡秴鏃讹細鍗充娇鍚庣寮傚父鎸傝捣锛孶I 涔熻兘鎭㈠锛屼笉浼氭案杩滃仠鍦ㄣ€屾洿鏂颁腑銆?            const ac = new AbortController();
             const killer = setTimeout(() => ac.abort(), 300000);
             try {
                 const res = await fetch('/api/update-from-github', {
@@ -2023,25 +2014,25 @@
                     signal:ac.signal
                 });
                 const data = await res.json().catch(() => ({}));
-                if(!res.ok) throw new Error(data.detail || (isEn ? 'Update failed' : '更新失败'));
+                if(!res.ok) throw new Error(data.detail || (isEn ? 'Update failed' : '鏇存柊澶辫触'));
                 if(data.update_notes) setProjectUpdateNotes(data.update_notes);
                 const restarting = data.restart_scheduled;
                 const usedLabel = data.source_label || (data.source === 'modelscope' ? 'ModelScope' : 'GitHub');
                 const fallbackNote = data.fallback_used
                     ? (isEn
                         ? ` (${sourceName} was unreachable, so it fell back to ${usedLabel})`
-                        : `（${sourceName} 不可用，已自动兜底切换到 ${usedLabel}）`)
+                        : `锛?{sourceName} 涓嶅彲鐢紝宸茶嚜鍔ㄥ厹搴曞垏鎹㈠埌 ${usedLabel}锛塦)
                     : '';
                 setUpdateSummary(
                     'ok',
-                    isEn ? 'Update complete' : '更新完成',
+                    isEn ? 'Update complete' : '鏇存柊瀹屾垚',
                     (restarting
                         ? (isEn
                             ? `Updated ${data.count || 0} files. The backend will restart in about 3 seconds; this page will reload when it returns.`
-                            : `已更新 ${data.count || 0} 个文件。后端将在约 3 秒后自动重启，本页面会在恢复后自动刷新。`)
+                            : `宸叉洿鏂?${data.count || 0} 涓枃浠躲€傚悗绔皢鍦ㄧ害 3 绉掑悗鑷姩閲嶅惎锛屾湰椤甸潰浼氬湪鎭㈠鍚庤嚜鍔ㄥ埛鏂般€俙)
                         : (isEn
                             ? `Updated ${data.count || 0} files. Please restart the backend, then refresh this page.`
-                            : `已更新 ${data.count || 0} 个文件。请重启后端，然后刷新页面。`)) + fallbackNote
+                            : `宸叉洿鏂?${data.count || 0} 涓枃浠躲€傝閲嶅惎鍚庣锛岀劧鍚庡埛鏂伴〉闈€俙)) + fallbackNote
                 );
                 document.getElementById('settings-gear-btn')?.classList.remove('has-update');
                 btn?.classList.remove('show');
@@ -2049,17 +2040,17 @@
                 if(restarting) waitForBackendAndReload();
             } catch(e) {
                 const msg = (e && e.name === 'AbortError')
-                    ? (isEn ? 'Update timed out. Switch source or check your network, then retry.' : '更新超时。请切换下载源或检查网络后重试。')
+                    ? (isEn ? 'Update timed out. Switch source or check your network, then retry.' : '鏇存柊瓒呮椂銆傝鍒囨崲涓嬭浇婧愭垨妫€鏌ョ綉缁滃悗閲嶈瘯銆?)
                     : describeNetworkError(e, isEn);
-                setUpdateSummary('fail', isEn ? 'Update failed' : '更新失败', msg);
+                setUpdateSummary('fail', isEn ? 'Update failed' : '鏇存柊澶辫触', msg);
             } finally {
                 clearTimeout(killer);
                 projectUpdateRunning = false;
                 if(btn) btn.disabled = false;
                 if(confirmBtn) confirmBtn.disabled = false;
                 if(testBtn) testBtn.disabled = false;
-                if(text) text.textContent = oldText || (isEn ? 'Update' : '一键更新');
-                if(confirmText) confirmText.textContent = isEn ? 'Start update' : '开始更新';
+                if(text) text.textContent = oldText || (isEn ? 'Update' : '涓€閿洿鏂?);
+                if(confirmText) confirmText.textContent = isEn ? 'Start update' : '寮€濮嬫洿鏂?;
                 refreshUpdateButtonText();
             }
         }
@@ -2079,7 +2070,7 @@
             try {
                 const list = await fetch('/api/update-backups').then(r => r.json());
                 const backups = list.backups || [];
-                if(!backups.length){ alert(isEn ? 'No backups available.' : '没有可用的备份'); return; }
+                if(!backups.length){ alert(isEn ? 'No backups available.' : '娌℃湁鍙敤鐨勫浠?); return; }
                 const lines = backups.slice(0, 8).map((b, i) => {
                     const d = new Date((b.created_at || 0) * 1000);
                     const ts = d.toLocaleString();
@@ -2087,25 +2078,25 @@
                 });
                 const promptMsg = (isEn
                     ? 'Select a backup to restore (enter the number):\n'
-                    : '选择要还原的备份（输入序号）：\n') + lines.join('\n');
+                    : '閫夋嫨瑕佽繕鍘熺殑澶囦唤锛堣緭鍏ュ簭鍙凤級锛歕n') + lines.join('\n');
                 const answer = prompt(promptMsg, '1');
                 const idx = Number(answer) - 1;
                 if(!(idx >= 0 && idx < backups.length)) return;
                 const target = backups[idx];
-                if(!confirm(isEn ? `Restore "${target.name}"? Backend will restart.` : `要还原 "${target.name}" 吗？后端会自动重启。`)) return;
+                if(!confirm(isEn ? `Restore "${target.name}"? Backend will restart.` : `瑕佽繕鍘?"${target.name}" 鍚楋紵鍚庣浼氳嚜鍔ㄩ噸鍚€俙)) return;
                 const res = await fetch('/api/update-rollback', {
                     method:'POST',
                     headers:{'Content-Type':'application/json'},
                     body:JSON.stringify({ name:target.name, auto_restart:true, restart_delay:3 })
                 });
                 const data = await res.json().catch(() => ({}));
-                if(!res.ok) throw new Error(data.detail || (isEn ? 'Rollback failed' : '回滚失败'));
+                if(!res.ok) throw new Error(data.detail || (isEn ? 'Rollback failed' : '鍥炴粴澶辫触'));
                 alert(isEn
                     ? `Restored ${data.count || 0} files. Backend is restarting.`
-                    : `已还原 ${data.count || 0} 个文件。后端正在重启。`);
+                    : `宸茶繕鍘?${data.count || 0} 涓枃浠躲€傚悗绔鍦ㄩ噸鍚€俙);
                 if(data.restart_scheduled) waitForBackendAndReload();
             } catch(e) {
-                alert((isEn ? 'Rollback failed: ' : '回滚失败：') + describeNetworkError(e, isEn));
+                alert((isEn ? 'Rollback failed: ' : '鍥炴粴澶辫触锛?) + describeNetworkError(e, isEn));
             }
         }
         window.rollbackProjectUpdate = rollbackProjectUpdate;
@@ -2122,7 +2113,7 @@
                 let best = null;
                 let reachable = false;
                 let serverChecked = false;
-                // 优先走后端检测：服务端用系统代理同时检测 GitHub 和 ModelScope，避免浏览器跨域/被墙
+                // 浼樺厛璧板悗绔娴嬶細鏈嶅姟绔敤绯荤粺浠ｇ悊鍚屾椂妫€娴?GitHub 鍜?ModelScope锛岄伩鍏嶆祻瑙堝櫒璺ㄥ煙/琚
                 try {
                     const r = await fetch('/api/check-update', { cache:'no-store' });
                     if(r.ok) {
@@ -2133,7 +2124,7 @@
                         if(d.latest?.version) best = {source:d.latest.source, version:d.latest.version, update_notes:d.latest.update_notes || d.update_notes || null};
                     }
                 } catch(e) {}
-                // 兜底：旧后端无 /api/check-update 时，浏览器直接拉取双源 VERSION
+                // 鍏滃簳锛氭棫鍚庣鏃?/api/check-update 鏃讹紝娴忚鍣ㄧ洿鎺ユ媺鍙栧弻婧?VERSION
                 if(!serverChecked) {
                     const sources = appInfo.sources || {};
                     const candidates = [
@@ -2158,14 +2149,13 @@
                     if(hasUpdate) {
                         openProjectUpdateModal();
                     } else if(reachable) {
-                        alert(isEn ? `You are on the latest version (${versionLabel(current)}).` : `已是最新版本（${versionLabel(current)}）。`);
+                        alert(isEn ? `You are on the latest version (${versionLabel(current)}).` : `宸叉槸鏈€鏂扮増鏈紙${versionLabel(current)}锛夈€俙);
                     } else {
-                        alert(isEn ? 'Could not reach GitHub or ModelScope. Check your network/proxy and try again.' : '无法连接 GitHub 或 ModelScope 更新源，请检查网络或代理后重试。');
+                        alert(isEn ? 'Could not reach GitHub or ModelScope. Check your network/proxy and try again.' : '鏃犳硶杩炴帴 GitHub 鎴?ModelScope 鏇存柊婧愶紝璇锋鏌ョ綉缁滄垨浠ｇ悊鍚庨噸璇曘€?);
                     }
                 }
             } catch(e) {
-                // 离线包里没有网络时保持安静，不影响本地使用。
-                if(manual) alert(isEn ? 'Update check failed.' : '检测更新失败。');
+                // 绂荤嚎鍖呴噷娌℃湁缃戠粶鏃朵繚鎸佸畨闈欙紝涓嶅奖鍝嶆湰鍦颁娇鐢ㄣ€?                if(manual) alert(isEn ? 'Update check failed.' : '妫€娴嬫洿鏂板け璐ャ€?);
             } finally {
                 if(badge) badge.classList.remove('checking');
             }

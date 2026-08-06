@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN" data-studio-scale="off">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="/static/images/logo.png" type="image/png">
-    <title data-i18n="smart.title">智能画布</title>
+    <title data-i18n="smart.title">鏅鸿兘鐢诲竷</title>
     <script>
         (function(){
             try {
@@ -16,10 +16,10 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/lucide.js?v=2026.08.06.5"></script>
-    <script src="/static/js/theme.js?v=2026.08.06.5"></script>
-    <script src="/static/js/i18n.js?v=2026.08.06.5"></script>
-    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=2026.08.06.5">
+    <script src="/static/vendor/js/lucide.js?v=2026.08.06.6"></script>
+    <script src="/static/js/theme.js?v=2026.08.06.6"></script>
+    <script src="/static/js/i18n.js?v=2026.08.06.6"></script>
+    <link rel="stylesheet" href="/static/css/smart-canvas.css?v=2026.08.06.6">
 </head>
 <body>
     <div id="shell" class="shell">
@@ -29,68 +29,68 @@
                     <div class="composer-head">
                         <div class="composer-head-left">
                             <select id="engineSelect" class="engine-select">
-                                <option value="api" data-i18n="smart.engineApi">API生成</option>
-                                <option value="volcengine" data-i18n="smart.engineVolcengine">火山引擎</option>
-                                <option value="modelscope" data-i18n="smart.engineMs">MS生成</option>
-                                <option value="comfy" data-i18n="smart.engineComfy">ComfyUI生成</option>
+                                <option value="api" data-i18n="smart.engineApi">API鐢熸垚</option>
+                                <option value="volcengine" data-i18n="smart.engineVolcengine">鐏北寮曟搸</option>
+                                <option value="modelscope" data-i18n="smart.engineMs">MS鐢熸垚</option>
+                                <option value="comfy" data-i18n="smart.engineComfy">ComfyUI鐢熸垚</option>
                                 <option value="runninghub" data-i18n="smart.engineRh">RunningHub</option>
                             </select>
                             <div id="apiKindToggle" class="kind-toggle" style="display:none">
-                                <button type="button" data-kind="image" class="active"><i data-lucide="image"></i><span data-i18n="smart.kindImage">图片</span></button>
-                                <button type="button" data-kind="video"><i data-lucide="film"></i><span data-i18n="smart.kindVideo">视频</span></button>
+                                <button type="button" data-kind="image" class="active"><i data-lucide="image"></i><span data-i18n="smart.kindImage">鍥剧墖</span></button>
+                                <button type="button" data-kind="video"><i data-lucide="film"></i><span data-i18n="smart.kindVideo">瑙嗛</span></button>
                             </div>
                         </div>
                     </div>
                     <div id="inputThumbsRow" class="input-thumbs-row"></div>
                     <div id="inputPromptPreview" class="input-prompt-preview"></div>
                     <div class="prompt-row">
-                        <div id="promptInput" class="prompt-input" contenteditable="true" data-i18n-placeholder="smart.promptPlaceholder" data-placeholder="描述你想生成或编辑的图片..."></div>
-                        <button id="composerTemplateBtn" class="composer-template-btn" type="button" title="模板库" aria-label="模板库" data-i18n-title="smart.promptTemplateLibrary">
-                            <i data-lucide="library"></i><span data-i18n="smart.promptTemplateLibrary">模板库</span>
+                        <div id="promptInput" class="prompt-input" contenteditable="true" data-i18n-placeholder="smart.promptPlaceholder" data-placeholder="鎻忚堪浣犳兂鐢熸垚鎴栫紪杈戠殑鍥剧墖..."></div>
+                        <button id="composerTemplateBtn" class="composer-template-btn" type="button" title="妯℃澘搴? aria-label="妯℃澘搴? data-i18n-title="smart.promptTemplateLibrary">
+                            <i data-lucide="library"></i><span data-i18n="smart.promptTemplateLibrary">妯℃澘搴?/span>
                         </button>
                         <div id="mentionPicker" class="mention-picker"></div>
-                        <div id="promptResize" class="prompt-resize" data-i18n-title="smart.promptResize" title="拖拽调整文本框高度"></div>
+                        <div id="promptResize" class="prompt-resize" data-i18n-title="smart.promptResize" title="鎷栨嫿璋冩暣鏂囨湰妗嗛珮搴?></div>
                     </div>
                     <div class="param-row">
                         <div id="dynamicParams" class="dynamic-params"></div>
                     </div>
                     <div class="composer-actions">
-                        <button id="cascadeRunBtn" class="run-btn cascade-run-btn" type="button" style="display:none"><i data-lucide="workflow"></i><span>一键运行</span></button>
-                        <button id="runBtn" class="run-btn" type="button"><i data-lucide="sparkles"></i><span data-i18n="smart.run">运行</span></button>
+                        <button id="cascadeRunBtn" class="run-btn cascade-run-btn" type="button" style="display:none"><i data-lucide="workflow"></i><span>涓€閿繍琛?/span></button>
+                        <button id="runBtn" class="run-btn" type="button"><i data-lucide="sparkles"></i><span data-i18n="smart.run">杩愯</span></button>
                     </div>
                 </div>
             </div>
         </div>
-        <button class="smart-back" type="button" onclick="backToCanvasList()"><i data-lucide="arrow-left"></i><span data-i18n="canvas.backToList">返回画布列表</span></button>
-        <div id="smartTitle" class="smart-title" data-i18n="smart.title">智能画布</div>
+        <button class="smart-back" type="button" onclick="backToCanvasList()"><i data-lucide="arrow-left"></i><span data-i18n="canvas.backToList">杩斿洖鐢诲竷鍒楄〃</span></button>
+        <div id="smartTitle" class="smart-title" data-i18n="smart.title">鏅鸿兘鐢诲竷</div>
         <div id="createMenu" class="create-menu">
             <div class="create-menu-grid">
                 <button class="create-card" type="button" data-create-type="image">
                     <span class="create-card-icon"><i data-lucide="upload-cloud"></i></span>
                     <span>
-                        <div class="create-card-title">上传</div>
-                        <div class="create-card-sub" data-i18n="smart.createImportNodeSub">图片、音频、视频都能导入</div>
+                        <div class="create-card-title">涓婁紶</div>
+                        <div class="create-card-sub" data-i18n="smart.createImportNodeSub">鍥剧墖銆侀煶棰戙€佽棰戦兘鑳藉鍏?/div>
                     </span>
                 </button>
                 <button class="create-card" type="button" data-create-type="group">
                     <span class="create-card-icon"><i data-lucide="group"></i></span>
                     <span>
-                        <div class="create-card-title">分组</div>
-                        <div class="create-card-sub">把提示词、图片、循环收进同一组</div>
+                        <div class="create-card-title">鍒嗙粍</div>
+                        <div class="create-card-sub">鎶婃彁绀鸿瘝銆佸浘鐗囥€佸惊鐜敹杩涘悓涓€缁?/div>
                     </span>
                 </button>
                 <button class="create-card" type="button" data-create-type="prompt">
                     <span class="create-card-icon"><i data-lucide="text-cursor-input"></i></span>
                     <span>
-                        <div class="create-card-title">提示词</div>
-                        <div class="create-card-sub">手写或用 LLM 生成文本</div>
+                        <div class="create-card-title">鎻愮ず璇?/div>
+                        <div class="create-card-sub">鎵嬪啓鎴栫敤 LLM 鐢熸垚鏂囨湰</div>
                     </span>
                 </button>
                 <button class="create-card" type="button" data-create-type="loop">
                     <span class="create-card-icon"><i data-lucide="repeat-2"></i></span>
                     <span>
-                        <div class="create-card-title">循环</div>
-                        <div class="create-card-sub">控制运行轮数、批次和变量</div>
+                        <div class="create-card-title">寰幆</div>
+                        <div class="create-card-sub">鎺у埗杩愯杞暟銆佹壒娆″拰鍙橀噺</div>
                     </span>
                 </button>
             </div>
@@ -98,74 +98,74 @@
         <input id="fileInput" type="file" accept="image/*,video/*,audio/*" multiple hidden>
         <div id="promptPresetPanel" class="prompt-preset-panel">
             <div class="prompt-preset-panel-head">
-                <span>提示词预设</span>
-                <button id="promptPresetClose" type="button" title="关闭"><i data-lucide="x"></i></button>
+                <span>鎻愮ず璇嶉璁?/span>
+                <button id="promptPresetClose" type="button" title="鍏抽棴"><i data-lucide="x"></i></button>
             </div>
             <div id="promptPresetStatus" class="prompt-preset-status"></div>
             <div class="prompt-preset-fields">
                 <select id="promptPresetSelect"></select>
-                <input id="promptPresetName" type="text" placeholder="预设名称">
-                <textarea id="promptPresetText" placeholder="预设内容"></textarea>
+                <input id="promptPresetName" type="text" placeholder="棰勮鍚嶇О">
+                <textarea id="promptPresetText" placeholder="棰勮鍐呭"></textarea>
             </div>
             <div class="prompt-preset-actions">
-                <button id="promptPresetApply" type="button">应用</button>
-                <button id="promptPresetDelete" class="danger" type="button">删除</button>
+                <button id="promptPresetApply" type="button">搴旂敤</button>
+                <button id="promptPresetDelete" class="danger" type="button">鍒犻櫎</button>
                 <span style="flex:1"></span>
-                <button id="promptPresetNew" type="button">存为新预设</button>
-                <button id="promptPresetSave" class="primary" type="button">保存修改</button>
+                <button id="promptPresetNew" type="button">瀛樹负鏂伴璁?/button>
+                <button id="promptPresetSave" class="primary" type="button">淇濆瓨淇敼</button>
             </div>
         </div>
         <div id="promptTemplatePanel" class="prompt-template-panel">
             <div class="prompt-template-head">
                 <div>
-                    <strong>提示词模板库</strong>
-                    <span>内置标准库 + 我的预设</span>
+                    <strong>鎻愮ず璇嶆ā鏉垮簱</strong>
+                    <span>鍐呯疆鏍囧噯搴?+ 鎴戠殑棰勮</span>
                 </div>
-                <button id="promptTemplateClose" type="button" title="关闭"><i data-lucide="x"></i></button>
+                <button id="promptTemplateClose" type="button" title="鍏抽棴"><i data-lucide="x"></i></button>
             </div>
-            <select id="promptTemplateLibrarySelect" class="prompt-template-library-select" title="选择提示词库"></select>
+            <select id="promptTemplateLibrarySelect" class="prompt-template-library-select" title="閫夋嫨鎻愮ず璇嶅簱"></select>
             <div class="prompt-template-search">
                 <i data-lucide="search"></i>
-                <input id="promptTemplateSearch" type="search" placeholder="搜索模板...">
+                <input id="promptTemplateSearch" type="search" placeholder="鎼滅储妯℃澘...">
             </div>
             <div id="promptTemplateCats" class="prompt-template-cats"></div>
             <div id="promptTemplateBody" class="prompt-template-body"></div>
         </div>
-        <button id="smartArrangeBtn" class="minimap-arrange-btn" type="button" title="整理选中节点" aria-label="整理选中节点"><i data-lucide="layout-grid"></i><span>整理选中</span></button>
+        <button id="smartArrangeBtn" class="minimap-arrange-btn" type="button" title="鏁寸悊閫変腑鑺傜偣" aria-label="鏁寸悊閫変腑鑺傜偣"><i data-lucide="layout-grid"></i><span>鏁寸悊閫変腑</span></button>
         <div id="minimap" class="smart-minimap" aria-hidden="true">
             <div id="minimapContent" class="smart-minimap-content">
                 <div id="minimapViewport" class="smart-minimap-viewport"></div>
             </div>
         </div>
-        <button id="smartWorkflowToggle" class="smart-workflow-toggle" type="button" title="导入导出工作流" aria-label="导入导出工作流"><i data-lucide="package-open"></i><span>工作流</span></button>
-        <button id="smartShortcutToggle" class="smart-shortcut-toggle" type="button" onclick="openSmartCanvasShortcuts()" title="快捷键" aria-label="快捷键" data-i18n-title="smart.shortcuts"><i data-lucide="keyboard"></i><span data-i18n="smart.shortcuts">快捷键</span></button>
-        <button id="smartLogToggle" class="smart-log-toggle" type="button" onclick="openSmartCanvasLog()" title="日志" aria-label="日志" data-i18n-title="canvas.logs"><i data-lucide="list-todo"></i><span data-i18n="canvas.logs">日志</span></button>
-        <button id="assetToggle" class="asset-toggle" type="button"><i data-lucide="library"></i><span data-i18n="smart.assetLibrary">资产库</span></button>
+        <button id="smartWorkflowToggle" class="smart-workflow-toggle" type="button" title="瀵煎叆瀵煎嚭宸ヤ綔娴? aria-label="瀵煎叆瀵煎嚭宸ヤ綔娴?><i data-lucide="package-open"></i><span>宸ヤ綔娴?/span></button>
+        <button id="smartShortcutToggle" class="smart-shortcut-toggle" type="button" onclick="openSmartCanvasShortcuts()" title="蹇嵎閿? aria-label="蹇嵎閿? data-i18n-title="smart.shortcuts"><i data-lucide="keyboard"></i><span data-i18n="smart.shortcuts">蹇嵎閿?/span></button>
+        <button id="smartLogToggle" class="smart-log-toggle" type="button" onclick="openSmartCanvasLog()" title="鏃ュ織" aria-label="鏃ュ織" data-i18n-title="canvas.logs"><i data-lucide="list-todo"></i><span data-i18n="canvas.logs">鏃ュ織</span></button>
+        <button id="assetToggle" class="asset-toggle" type="button"><i data-lucide="library"></i><span data-i18n="smart.assetLibrary">璧勪骇搴?/span></button>
         <aside id="smartWorkflowTransferModal" class="workflow-transfer-panel">
             <div class="workflow-transfer-head">
                 <div>
-                    <div class="workflow-transfer-title">导入导出工作流</div>
-                    <div id="smartWorkflowTransferSub" class="workflow-transfer-sub">导出选中节点，或把工作流导入到当前画布</div>
+                    <div class="workflow-transfer-title">瀵煎叆瀵煎嚭宸ヤ綔娴?/div>
+                    <div id="smartWorkflowTransferSub" class="workflow-transfer-sub">瀵煎嚭閫変腑鑺傜偣锛屾垨鎶婂伐浣滄祦瀵煎叆鍒板綋鍓嶇敾甯?/div>
                 </div>
-                <button class="asset-mini-btn" type="button" onclick="closeSmartWorkflowTransferModal()" title="关闭"><i data-lucide="x"></i></button>
+                <button class="asset-mini-btn" type="button" onclick="closeSmartWorkflowTransferModal()" title="鍏抽棴"><i data-lucide="x"></i></button>
             </div>
             <div class="workflow-transfer-body">
                 <section class="workflow-transfer-card">
-                    <div class="workflow-transfer-card-head"><i data-lucide="upload"></i><strong>导出工作流</strong></div>
-                    <p>使用当前选中的节点和它们之间的连线生成工作流。</p>
-                    <div id="smartWorkflowExportMeta" class="workflow-transfer-meta">未选择节点</div>
+                    <div class="workflow-transfer-card-head"><i data-lucide="upload"></i><strong>瀵煎嚭宸ヤ綔娴?/strong></div>
+                    <p>浣跨敤褰撳墠閫変腑鐨勮妭鐐瑰拰瀹冧滑涔嬮棿鐨勮繛绾跨敓鎴愬伐浣滄祦銆?/p>
+                    <div id="smartWorkflowExportMeta" class="workflow-transfer-meta">鏈€夋嫨鑺傜偣</div>
                     <div class="workflow-transfer-actions workflow-export-actions">
-                        <button class="workflow-transfer-btn secondary" type="button" onclick="exportSelectedSmartWorkflow(false)"><i data-lucide="file-json"></i><span>导出 JSON</span></button>
-                        <button class="workflow-transfer-btn primary" type="button" onclick="exportSelectedSmartWorkflow(true)"><i data-lucide="package"></i><span>导出并包含资源</span></button>
+                        <button class="workflow-transfer-btn secondary" type="button" onclick="exportSelectedSmartWorkflow(false)"><i data-lucide="file-json"></i><span>瀵煎嚭 JSON</span></button>
+                        <button class="workflow-transfer-btn primary" type="button" onclick="exportSelectedSmartWorkflow(true)"><i data-lucide="package"></i><span>瀵煎嚭骞跺寘鍚祫婧?/span></button>
                     </div>
                 </section>
                 <section class="workflow-transfer-card">
-                    <div class="workflow-transfer-card-head"><i data-lucide="download"></i><strong>导入工作流</strong></div>
-                    <p>支持工作流 JSON，也支持包含资源的 ZIP 包。导入内容会追加到当前画布。</p>
+                    <div class="workflow-transfer-card-head"><i data-lucide="download"></i><strong>瀵煎叆宸ヤ綔娴?/strong></div>
+                    <p>鏀寔宸ヤ綔娴?JSON锛屼篃鏀寔鍖呭惈璧勬簮鐨?ZIP 鍖呫€傚鍏ュ唴瀹逛細杩藉姞鍒板綋鍓嶇敾甯冦€?/p>
                     <div id="smartWorkflowImportDropZone" class="workflow-import-drop">
                         <i data-lucide="file-up"></i>
-                        <span>拖入 JSON / ZIP 工作流</span>
-                        <small>或点击选择文件</small>
+                        <span>鎷栧叆 JSON / ZIP 宸ヤ綔娴?/span>
+                        <small>鎴栫偣鍑婚€夋嫨鏂囦欢</small>
                     </div>
                     <input id="smartWorkflowImportInput" type="file" accept=".json,.zip,application/json,application/zip" hidden>
                 </section>
@@ -173,32 +173,32 @@
         </aside>
         <aside id="assetPanel" class="asset-panel">
             <div class="asset-head">
-                <div class="asset-title"><i data-lucide="library"></i><span data-i18n="smart.assetLibrary">资产库</span></div>
-                <button id="assetCloseBtn" class="asset-mini-btn" type="button" title="收起" data-i18n-title="common.close"><i data-lucide="chevron-right"></i></button>
+                <div class="asset-title"><i data-lucide="library"></i><span data-i18n="smart.assetLibrary">璧勪骇搴?/span></div>
+                <button id="assetCloseBtn" class="asset-mini-btn" type="button" title="鏀惰捣" data-i18n-title="common.close"><i data-lucide="chevron-right"></i></button>
             </div>
             <div class="asset-tabs">
-                <button class="asset-tab active" type="button" data-asset-tab="image" data-i18n="smart.assetImages">图片资产</button>
-                <button class="asset-tab" type="button" data-asset-tab="workflow" data-i18n="smart.assetWorkflows">工作流</button>
+                <button class="asset-tab active" type="button" data-asset-tab="image" data-i18n="smart.assetImages">鍥剧墖璧勪骇</button>
+                <button class="asset-tab" type="button" data-asset-tab="workflow" data-i18n="smart.assetWorkflows">宸ヤ綔娴?/button>
             </div>
             <div id="assetImageControls">
-                <select id="assetLibrarySelect" class="asset-category-select asset-library-select" title="选择资产库"></select>
+                <select id="assetLibrarySelect" class="asset-category-select asset-library-select" title="閫夋嫨璧勪骇搴?></select>
                 <div class="asset-category-row">
                     <select id="assetCategorySelect" class="asset-category-select"></select>
-                    <button id="assetAddCategoryBtn" class="asset-mini-btn" type="button" title="新建文件夹" data-i18n-title="smart.assetNewFolder"><i data-lucide="folder-plus"></i></button>
-                    <button id="assetRenameCategoryBtn" class="asset-mini-btn" type="button" title="重命名文件夹" data-i18n-title="smart.assetRenameFolder"><i data-lucide="pencil"></i></button>
+                    <button id="assetAddCategoryBtn" class="asset-mini-btn" type="button" title="鏂板缓鏂囦欢澶? data-i18n-title="smart.assetNewFolder"><i data-lucide="folder-plus"></i></button>
+                    <button id="assetRenameCategoryBtn" class="asset-mini-btn" type="button" title="閲嶅懡鍚嶆枃浠跺す" data-i18n-title="smart.assetRenameFolder"><i data-lucide="pencil"></i></button>
                 </div>
             </div>
-            <div id="assetDropZone" class="asset-drop-zone" data-i18n="smart.assetDropHint">把画布图片拖到这里保存到当前文件夹</div>
+            <div id="assetDropZone" class="asset-drop-zone" data-i18n="smart.assetDropHint">鎶婄敾甯冨浘鐗囨嫋鍒拌繖閲屼繚瀛樺埌褰撳墠鏂囦欢澶?/div>
             <div id="assetGrid" class="asset-grid"></div>
-            <div id="workflowEmpty" class="workflow-empty" style="display:none" data-i18n="smart.assetWorkflowEmpty">工作流资产先预留在这里，后续接入。</div>
+            <div id="workflowEmpty" class="workflow-empty" style="display:none" data-i18n="smart.assetWorkflowEmpty">宸ヤ綔娴佽祫浜у厛棰勭暀鍦ㄨ繖閲岋紝鍚庣画鎺ュ叆銆?/div>
         </aside>
         <div id="assetDialogBackdrop" class="asset-dialog-backdrop" hidden>
             <div class="asset-dialog">
-                <div class="asset-dialog-title"><i data-lucide="folder-pen"></i><span id="assetDialogTitle">命名</span></div>
+                <div class="asset-dialog-title"><i data-lucide="folder-pen"></i><span id="assetDialogTitle">鍛藉悕</span></div>
                 <textarea id="assetDialogInput" class="asset-dialog-input" rows="1" autocomplete="off"></textarea>
                 <div class="asset-dialog-actions">
-                    <button id="assetDialogCancel" class="asset-dialog-btn secondary" type="button" data-i18n="common.cancel">取消</button>
-                    <button id="assetDialogOk" class="asset-dialog-btn primary" type="button" data-i18n="common.confirm">确定</button>
+                    <button id="assetDialogCancel" class="asset-dialog-btn secondary" type="button" data-i18n="common.cancel">鍙栨秷</button>
+                    <button id="assetDialogOk" class="asset-dialog-btn primary" type="button" data-i18n="common.confirm">纭畾</button>
                 </div>
             </div>
         </div>
@@ -210,8 +210,8 @@
         <div id="smartLogModal" class="log-modal" onclick="closeSmartCanvasLog()">
             <div class="log-panel" onclick="event.stopPropagation()">
                 <div class="log-head">
-                    <div class="log-title" data-i18n="canvas.generationLogs">生成日志</div>
-                    <button class="preview-icon-btn" type="button" onclick="closeSmartCanvasLog()" title="关闭" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <div class="log-title" data-i18n="canvas.generationLogs">鐢熸垚鏃ュ織</div>
+                    <button class="preview-icon-btn" type="button" onclick="closeSmartCanvasLog()" title="鍏抽棴" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <div id="smartLogList" class="log-list"></div>
             </div>
@@ -219,22 +219,22 @@
         <div id="smartShortcutModal" class="shortcut-modal" onclick="closeSmartCanvasShortcuts()">
             <div class="shortcut-panel" onclick="event.stopPropagation()">
                 <div class="shortcut-head">
-                    <div class="shortcut-title"><i data-lucide="keyboard"></i><span data-i18n="smart.shortcuts">快捷键</span></div>
-                    <button class="preview-icon-btn" type="button" onclick="closeSmartCanvasShortcuts()" title="关闭" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <div class="shortcut-title"><i data-lucide="keyboard"></i><span data-i18n="smart.shortcuts">蹇嵎閿?/span></div>
+                    <button class="preview-icon-btn" type="button" onclick="closeSmartCanvasShortcuts()" title="鍏抽棴" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <div class="shortcut-list">
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd></span><span data-i18n="smart.shortcutBoxSelect">按住并拖拽框选节点</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>G</kbd></span><span data-i18n="smart.shortcutGroup">合并选中的图片为组</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>G</kbd></span><span data-i18n="smart.shortcutUngroup">释放选中的分组</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>Z</kbd></span><span data-i18n="smart.shortcutUndo">撤销上一步操作</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>C</kbd></span><span data-i18n="smart.shortcutCopy">复制选中的节点</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>V</kbd></span><span data-i18n="smart.shortcutPaste">粘贴节点或剪贴板图片</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>A</kbd></span><span data-i18n="smart.shortcutAssets">打开/关闭资源库</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Z</kbd></span><span data-i18n="smart.shortcutOverview">缩小画布视图</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>双击</kbd></span><span data-i18n="smart.shortcutCreateMenu">打开快捷菜单</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>空白处</kbd></span><span data-i18n="smart.shortcutPan">拖动画布</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>滚轮</kbd></span><span data-i18n="smart.shortcutZoom">缩放画布或预览图片</span></div>
-                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Del</kbd></span><span data-i18n="smart.shortcutDelete">删除选中节点</span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd></span><span data-i18n="smart.shortcutBoxSelect">鎸変綇骞舵嫋鎷芥閫夎妭鐐?/span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>G</kbd></span><span data-i18n="smart.shortcutGroup">鍚堝苟閫変腑鐨勫浘鐗囦负缁?/span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>G</kbd></span><span data-i18n="smart.shortcutUngroup">閲婃斁閫変腑鐨勫垎缁?/span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>Z</kbd></span><span data-i18n="smart.shortcutUndo">鎾ら攢涓婁竴姝ユ搷浣?/span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>C</kbd></span><span data-i18n="smart.shortcutCopy">澶嶅埗閫変腑鐨勮妭鐐?/span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Ctrl</kbd><kbd>V</kbd></span><span data-i18n="smart.shortcutPaste">绮樿创鑺傜偣鎴栧壀璐存澘鍥剧墖</span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>A</kbd></span><span data-i18n="smart.shortcutAssets">鎵撳紑/鍏抽棴璧勬簮搴?/span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Z</kbd></span><span data-i18n="smart.shortcutOverview">缂╁皬鐢诲竷瑙嗗浘</span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>鍙屽嚮</kbd></span><span data-i18n="smart.shortcutCreateMenu">鎵撳紑蹇嵎鑿滃崟</span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>绌虹櫧澶?/kbd></span><span data-i18n="smart.shortcutPan">鎷栧姩鐢诲竷</span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>婊氳疆</kbd></span><span data-i18n="smart.shortcutZoom">缂╂斁鐢诲竷鎴栭瑙堝浘鐗?/span></div>
+                    <div class="shortcut-item"><span class="shortcut-keys"><kbd>Del</kbd></span><span data-i18n="smart.shortcutDelete">鍒犻櫎閫変腑鑺傜偣</span></div>
                 </div>
             </div>
         </div>
@@ -242,23 +242,23 @@
             <div class="image-edit-panel">
                 <div class="image-edit-head">
                     <div>
-                        <div id="imageEditTitle" class="image-edit-title" data-i18n="canvas.editImage">编辑图片</div>
-                        <div id="imageEditSub" class="image-edit-sub" data-i18n="canvas.editImageSub">选择裁剪、遮罩或画笔模式</div>
+                        <div id="imageEditTitle" class="image-edit-title" data-i18n="canvas.editImage">缂栬緫鍥剧墖</div>
+                        <div id="imageEditSub" class="image-edit-sub" data-i18n="canvas.editImageSub">閫夋嫨瑁佸壀銆侀伄缃╂垨鐢荤瑪妯″紡</div>
                     </div>
                     <div class="image-edit-mode">
-                        <button type="button" data-image-edit-mode="preview" class="active"><i data-lucide="eye" class="w-3.5 h-3.5"></i><span data-i18n="smart.modePreview">预览</span></button>
-                        <button type="button" data-image-edit-mode="crop"><i data-lucide="crop" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeCrop">裁剪</span></button>
+                        <button type="button" data-image-edit-mode="preview" class="active"><i data-lucide="eye" class="w-3.5 h-3.5"></i><span data-i18n="smart.modePreview">棰勮</span></button>
+                        <button type="button" data-image-edit-mode="crop"><i data-lucide="crop" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeCrop">瑁佸壀</span></button>
                         <button type="button" data-image-edit-mode="outpaint"><i data-lucide="expand" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeOutpaint">Expand</span></button>
-                        <button type="button" data-image-edit-mode="mask"><i data-lucide="brush" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeMask">遮罩</span></button>
-                        <button type="button" data-image-edit-mode="brush"><i data-lucide="paintbrush" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeBrush">画笔</span></button>
-                        <button type="button" data-image-edit-mode="grid"><i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeGrid">宫格切分</span></button>
+                        <button type="button" data-image-edit-mode="mask"><i data-lucide="brush" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeMask">閬僵</span></button>
+                        <button type="button" data-image-edit-mode="brush"><i data-lucide="paintbrush" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeBrush">鐢荤瑪</span></button>
+                        <button type="button" data-image-edit-mode="grid"><i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i><span data-i18n="canvas.modeGrid">瀹牸鍒囧垎</span></button>
                     </div>
-                    <button class="preview-icon-btn" type="button" onclick="closeImageEditor()" title="关闭" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    <button class="preview-icon-btn" type="button" onclick="closeImageEditor()" title="鍏抽棴" data-i18n-title="common.close"><i data-lucide="x" class="w-4 h-4"></i></button>
                 </div>
                 <div id="imageCropTools" class="image-edit-tools crop-ratio-tools">
-                    <span class="image-edit-sub">比例</span>
-                    <button class="crop-ratio-btn active" type="button" data-crop-ratio="free">自由</button>
-                    <button class="crop-ratio-btn" type="button" data-crop-ratio="source">原图</button>
+                    <span class="image-edit-sub">姣斾緥</span>
+                    <button class="crop-ratio-btn active" type="button" data-crop-ratio="free">鑷敱</button>
+                    <button class="crop-ratio-btn" type="button" data-crop-ratio="source">鍘熷浘</button>
                     <button class="crop-ratio-btn" type="button" data-crop-ratio="1:1">1:1</button>
                     <button class="crop-ratio-btn" type="button" data-crop-ratio="4:3">4:3</button>
                     <button class="crop-ratio-btn" type="button" data-crop-ratio="3:4">3:4</button>
@@ -272,7 +272,7 @@
                     <div id="panoramaControls" class="panorama-controls" style="display:none">
                         <div class="panorama-control-group">
                             <div class="panorama-control-line">
-                                <span class="panorama-control-label" data-i18n="smart.panoramaRatio">视窗比例</span>
+                                <span class="panorama-control-label" data-i18n="smart.panoramaRatio">瑙嗙獥姣斾緥</span>
                                 <button type="button" data-panorama-ratio="square">1:1</button>
                                 <button type="button" data-panorama-ratio="portrait">2:3</button>
                                 <button type="button" data-panorama-ratio="landscape">3:2</button>
@@ -282,7 +282,7 @@
                                 <button type="button" data-panorama-ratio="wide" class="active">16:9</button>
                                 <button type="button" data-panorama-ratio="ultrawide">21:9</button>
                                 <button type="button" data-panorama-ratio="ultratall">9:21</button>
-                                <button type="button" data-panorama-ratio="custom" data-i18n="smart.custom">自定义</button>
+                                <button type="button" data-panorama-ratio="custom" data-i18n="smart.custom">鑷畾涔?/button>
                                 <label id="panoramaCustomRatio" class="panorama-custom-ratio" style="display:none">
                                     <input id="panoramaRatioW" type="number" min="1" max="999" step="1" value="16" aria-label="ratio width">
                                     <span>:</span>
@@ -293,71 +293,71 @@
                     </div>
                 </div>
                 <div id="imageMaskTools" class="image-edit-tools">
-                    <label><span data-i18n="canvas.brushSize">笔刷</span> <input id="maskBrushSize" type="range" min="4" max="160" value="42"></label>
-                    <button id="maskUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoEditDrawing()" title="撤销"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
-                    <button id="maskRedoBtn" class="image-edit-btn secondary" type="button" onclick="redoEditDrawing()" title="恢复"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" onclick="clearEditDrawing()"><i data-lucide="eraser" class="w-4 h-4"></i><span data-i18n="canvas.clear">清空</span></button>
-                    <span class="image-edit-sub" data-i18n="canvas.maskHint">白色区域为要编辑的遮罩</span>
+                    <label><span data-i18n="canvas.brushSize">绗斿埛</span> <input id="maskBrushSize" type="range" min="4" max="160" value="42"></label>
+                    <button id="maskUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoEditDrawing()" title="鎾ら攢"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+                    <button id="maskRedoBtn" class="image-edit-btn secondary" type="button" onclick="redoEditDrawing()" title="鎭㈠"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" onclick="clearEditDrawing()"><i data-lucide="eraser" class="w-4 h-4"></i><span data-i18n="canvas.clear">娓呯┖</span></button>
+                    <span class="image-edit-sub" data-i18n="canvas.maskHint">鐧借壊鍖哄煙涓鸿缂栬緫鐨勯伄缃?/span>
                 </div>
                 <div id="imageBrushTools" class="image-edit-tools">
-                    <button class="image-edit-btn primary" type="button" data-brush-tool="free" onclick="setBrushTool('free')" title="自由画笔"><i data-lucide="paintbrush" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" data-brush-tool="rect" onclick="setBrushTool('rect')" title="矩形"><i data-lucide="square" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" data-brush-tool="ellipse" onclick="setBrushTool('ellipse')" title="椭圆"><i data-lucide="circle" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" data-brush-tool="label" onclick="setBrushTool('label')" title="数字标签"><i data-lucide="list-ordered" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" data-brush-tool="text" onclick="setBrushTool('text')" title="文字标签"><i data-lucide="type" class="w-4 h-4"></i></button>
-                    <label><span data-i18n="canvas.color">颜色</span> <input id="paintBrushColor" type="color" value="#ff2d55"></label>
-                    <label><span data-i18n="canvas.brushSize">笔刷</span> <input id="paintBrushSize" type="range" min="2" max="80" value="14"></label>
-                    <button id="brushUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoEditDrawing()" title="撤销"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
-                    <button id="brushRedoBtn" class="image-edit-btn secondary" type="button" onclick="redoEditDrawing()" title="恢复"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
-                    <button class="image-edit-btn secondary" type="button" onclick="clearEditDrawing()"><i data-lucide="eraser" class="w-4 h-4"></i><span data-i18n="canvas.clear">清空</span></button>
+                    <button class="image-edit-btn primary" type="button" data-brush-tool="free" onclick="setBrushTool('free')" title="鑷敱鐢荤瑪"><i data-lucide="paintbrush" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="rect" onclick="setBrushTool('rect')" title="鐭╁舰"><i data-lucide="square" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="ellipse" onclick="setBrushTool('ellipse')" title="妞渾"><i data-lucide="circle" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="label" onclick="setBrushTool('label')" title="鏁板瓧鏍囩"><i data-lucide="list-ordered" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" data-brush-tool="text" onclick="setBrushTool('text')" title="鏂囧瓧鏍囩"><i data-lucide="type" class="w-4 h-4"></i></button>
+                    <label><span data-i18n="canvas.color">棰滆壊</span> <input id="paintBrushColor" type="color" value="#ff2d55"></label>
+                    <label><span data-i18n="canvas.brushSize">绗斿埛</span> <input id="paintBrushSize" type="range" min="2" max="80" value="14"></label>
+                    <button id="brushUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoEditDrawing()" title="鎾ら攢"><i data-lucide="undo-2" class="w-4 h-4"></i></button>
+                    <button id="brushRedoBtn" class="image-edit-btn secondary" type="button" onclick="redoEditDrawing()" title="鎭㈠"><i data-lucide="redo-2" class="w-4 h-4"></i></button>
+                    <button class="image-edit-btn secondary" type="button" onclick="clearEditDrawing()"><i data-lucide="eraser" class="w-4 h-4"></i><span data-i18n="canvas.clear">娓呯┖</span></button>
                 </div>
                 <div id="imageGridTools" class="image-edit-tools">
                     <div class="grid-operation-toggle">
-                        <button id="gridSplitModeBtn" class="image-edit-btn primary" type="button" onclick="setGridOperationMode('split')">宫格切分</button>
-                        <button id="gridJoinModeBtn" class="image-edit-btn secondary" type="button" onclick="setGridOperationMode('join')">宫格拼接</button>
+                        <button id="gridSplitModeBtn" class="image-edit-btn primary" type="button" onclick="setGridOperationMode('split')">瀹牸鍒囧垎</button>
+                        <button id="gridJoinModeBtn" class="image-edit-btn secondary" type="button" onclick="setGridOperationMode('join')">瀹牸鎷兼帴</button>
                     </div>
-                    <button id="gridCustomToggle" class="image-edit-btn secondary grid-split-control" type="button" onclick="toggleGridCustomMode()" data-i18n="canvas.gridCustom" data-i18n-title="canvas.gridCustomTitle" title="自由放置切割线">自定义</button>
+                    <button id="gridCustomToggle" class="image-edit-btn secondary grid-split-control" type="button" onclick="toggleGridCustomMode()" data-i18n="canvas.gridCustom" data-i18n-title="canvas.gridCustomTitle" title="鑷敱鏀剧疆鍒囧壊绾?>鑷畾涔?/button>
                     <div class="grid-preset-row grid-split-control">
-                        <span class="image-edit-sub" data-i18n="canvas.gridPresets">预设</span>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(1, 2)">1×2</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 1)">2×1</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 2)">2×2</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 3)">2×3</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(3, 2)">3×2</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(3, 3)">3×3</button>
+                        <span class="image-edit-sub" data-i18n="canvas.gridPresets">棰勮</span>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(1, 2)">1脳2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 1)">2脳1</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 2)">2脳2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(2, 3)">2脳3</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(3, 2)">3脳2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridPreset(3, 3)">3脳3</button>
                     </div>
                     <div id="gridJoinPresetRow" class="grid-preset-row grid-join-control" style="display:none">
-                        <span class="image-edit-sub">拼接</span>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(1, 2)">1×2</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(2, 1)">2×1</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(2, 2)">2×2</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(2, 3)">2×3</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(3, 2)">3×2</button>
-                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(3, 3)">3×3</button>
-                        <button class="grid-preset-btn" type="button" onclick="resetGridJoinLayout()">自动</button>
+                        <span class="image-edit-sub">鎷兼帴</span>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(1, 2)">1脳2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(2, 1)">2脳1</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(2, 2)">2脳2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(2, 3)">2脳3</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(3, 2)">3脳2</button>
+                        <button class="grid-preset-btn" type="button" onclick="applyGridJoinPreset(3, 3)">3脳3</button>
+                        <button class="grid-preset-btn" type="button" onclick="resetGridJoinLayout()">鑷姩</button>
                     </div>
                     <div id="gridJoinSizeRow" class="grid-preset-row grid-join-control" style="display:none">
-                        <span class="image-edit-sub">尺寸</span>
+                        <span class="image-edit-sub">灏哄</span>
                         <button class="grid-preset-btn" type="button" data-grid-join-size="1024" onclick="setGridJoinOutputSize(1024)">1K</button>
                         <button class="grid-preset-btn active" type="button" data-grid-join-size="2048" onclick="setGridJoinOutputSize(2048)">2K</button>
                         <button class="grid-preset-btn" type="button" data-grid-join-size="4096" onclick="setGridJoinOutputSize(4096)">4K</button>
                     </div>
                     <span id="gridRegularControls" class="grid-split-control" style="display:contents">
-                        <label><span data-i18n="canvas.gridHLines">横向线</span> <input id="gridHorizontalLines" type="number" min="0" max="20" value="2"></label>
-                        <label><span data-i18n="canvas.gridVLines">竖向线</span> <input id="gridVerticalLines" type="number" min="0" max="20" value="2"></label>
+                        <label><span data-i18n="canvas.gridHLines">妯悜绾?/span> <input id="gridHorizontalLines" type="number" min="0" max="20" value="2"></label>
+                        <label><span data-i18n="canvas.gridVLines">绔栧悜绾?/span> <input id="gridVerticalLines" type="number" min="0" max="20" value="2"></label>
                     </span>
                     <div id="gridCustomControls" class="grid-split-control" style="display:none;align-items:center;gap:6px">
-                        <button id="gridOrientH" class="image-edit-btn primary" type="button" onclick="setGridCustomOrientation('h')" data-i18n="canvas.gridOrientH" data-i18n-title="canvas.gridOrientHTitle" title="点击图片放置水平线">水平</button>
-                        <button id="gridOrientV" class="image-edit-btn secondary" type="button" onclick="setGridCustomOrientation('v')" data-i18n="canvas.gridOrientV" data-i18n-title="canvas.gridOrientVTitle" title="点击图片放置竖直线">垂直</button>
-                        <button id="gridUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoGridCustomLine()" data-i18n-title="canvas.gridUndo" title="撤销上一条线" disabled style="opacity:.4"><i data-lucide="undo-2" class="w-3.5 h-3.5"></i></button>
-                        <button class="image-edit-btn secondary" type="button" onclick="clearGridCustomLines()" data-i18n-title="canvas.gridClearLines" title="清除所有自定义线"><i data-lucide="eraser" class="w-3.5 h-3.5"></i></button>
+                        <button id="gridOrientH" class="image-edit-btn primary" type="button" onclick="setGridCustomOrientation('h')" data-i18n="canvas.gridOrientH" data-i18n-title="canvas.gridOrientHTitle" title="鐐瑰嚮鍥剧墖鏀剧疆姘村钩绾?>姘村钩</button>
+                        <button id="gridOrientV" class="image-edit-btn secondary" type="button" onclick="setGridCustomOrientation('v')" data-i18n="canvas.gridOrientV" data-i18n-title="canvas.gridOrientVTitle" title="鐐瑰嚮鍥剧墖鏀剧疆绔栫洿绾?>鍨傜洿</button>
+                        <button id="gridUndoBtn" class="image-edit-btn secondary" type="button" onclick="undoGridCustomLine()" data-i18n-title="canvas.gridUndo" title="鎾ら攢涓婁竴鏉＄嚎" disabled style="opacity:.4"><i data-lucide="undo-2" class="w-3.5 h-3.5"></i></button>
+                        <button class="image-edit-btn secondary" type="button" onclick="clearGridCustomLines()" data-i18n-title="canvas.gridClearLines" title="娓呴櫎鎵€鏈夎嚜瀹氫箟绾?><i data-lucide="eraser" class="w-3.5 h-3.5"></i></button>
                     </div>
-                    <label class="grid-gap-control"><span data-i18n="canvas.gridGap">间隔(px)</span> <input id="gridGapSize" type="range" min="0" max="240" step="1" value="0"><span id="gridGapValue" class="grid-gap-value">0</span></label>
+                    <label class="grid-gap-control"><span data-i18n="canvas.gridGap">闂撮殧(px)</span> <input id="gridGapSize" type="range" min="0" max="240" step="1" value="0"><span id="gridGapValue" class="grid-gap-value">0</span></label>
                     <span id="gridSplitCount" class="image-edit-sub"></span>
                 </div>
                 <div id="imageEditStage" class="image-edit-stage">
-                    <button id="previewPrevBtn" class="preview-nav-btn prev" type="button" onclick="navigatePreviewImage(-1)" title="上一张"><i data-lucide="chevron-left"></i></button>
-                    <button id="previewNextBtn" class="preview-nav-btn next" type="button" onclick="navigatePreviewImage(1)" title="下一张"><i data-lucide="chevron-right"></i></button>
+                    <button id="previewPrevBtn" class="preview-nav-btn prev" type="button" onclick="navigatePreviewImage(-1)" title="涓婁竴寮?><i data-lucide="chevron-left"></i></button>
+                    <button id="previewNextBtn" class="preview-nav-btn next" type="button" onclick="navigatePreviewImage(1)" title="涓嬩竴寮?><i data-lucide="chevron-right"></i></button>
                     <div class="image-edit-stage-inner">
                         <div id="previewStage" class="preview-stage" style="display:none">
                             <div id="previewFrame" class="preview-frame">
@@ -365,12 +365,12 @@
                                 <video id="previewCurrentVideo" class="preview-current preview-current-video" controls preload="metadata" crossorigin="anonymous" playsinline disablepictureinpicture controlslist="nodownload noplaybackrate noremoteplayback" style="display:none"></video>
                                 <div id="panoramaStage" class="panorama-stage" style="display:none">
                                     <canvas id="panoramaCanvas"></canvas>
-                                    <div id="panoramaLoading" class="panorama-loading" data-i18n="smart.panoramaLoading">加载中...</div>
+                                    <div id="panoramaLoading" class="panorama-loading" data-i18n="smart.panoramaLoading">鍔犺浇涓?..</div>
                                 </div>
                                 <div id="previewCompareLayer" class="preview-compare-layer">
                                     <img id="previewCompareImage" alt="original">
                                 </div>
-                                <div id="previewCompareHandle" class="preview-compare-handle" data-i18n-title="smart.compareDrag" title="拖动对比"></div>
+                                <div id="previewCompareHandle" class="preview-compare-handle" data-i18n-title="smart.compareDrag" title="鎷栧姩瀵规瘮"></div>
                             </div>
                         </div>
                         <div id="cropCanvas" class="crop-canvas">
@@ -400,32 +400,32 @@
                     </div>
                     <div class="preview-download-overlay">
                         <button id="previewDownloadBtn" class="compare-toggle" type="button" onclick="downloadPreviewImage()"><i data-lucide="download" class="w-4 h-4"></i><span data-i18n="canvas.download">Download</span></button>
-                        <button id="previewDownloadAllBtn" class="compare-toggle" type="button" onclick="downloadPreviewGroup()" style="display:none"><i data-lucide="archive" class="w-4 h-4"></i><span>下载全部</span></button>
+                        <button id="previewDownloadAllBtn" class="compare-toggle" type="button" onclick="downloadPreviewGroup()" style="display:none"><i data-lucide="archive" class="w-4 h-4"></i><span>涓嬭浇鍏ㄩ儴</span></button>
                     </div>
                     <div class="preview-tools-overlay">
                         <div id="compareThumbs" class="compare-thumbs" style="display:none"></div>
                         <div class="preview-action-row">
-                            <button id="panoramaToggleBtn" class="compare-toggle" type="button" onclick="togglePanoramaPreview()" style="display:none"><i data-lucide="globe-2" class="w-4 h-4"></i><span data-i18n="smart.panorama360">360全景</span></button>
-                            <button id="panoramaExportBtn" class="compare-toggle" type="button" onclick="exportPanoramaFrame()" style="display:none"><i data-lucide="image-down" class="w-4 h-4"></i><span data-i18n="smart.panoramaExport">导出画面</span></button>
-                            <button id="compareToggleBtn" class="compare-toggle" type="button" onclick="togglePreviewCompare()" style="display:none"><i data-lucide="columns-2" class="w-4 h-4"></i><span data-i18n="smart.compareSource">对比原图</span></button>
+                            <button id="panoramaToggleBtn" class="compare-toggle" type="button" onclick="togglePanoramaPreview()" style="display:none"><i data-lucide="globe-2" class="w-4 h-4"></i><span data-i18n="smart.panorama360">360鍏ㄦ櫙</span></button>
+                            <button id="panoramaExportBtn" class="compare-toggle" type="button" onclick="exportPanoramaFrame()" style="display:none"><i data-lucide="image-down" class="w-4 h-4"></i><span data-i18n="smart.panoramaExport">瀵煎嚭鐢婚潰</span></button>
+                            <button id="compareToggleBtn" class="compare-toggle" type="button" onclick="togglePreviewCompare()" style="display:none"><i data-lucide="columns-2" class="w-4 h-4"></i><span data-i18n="smart.compareSource">瀵规瘮鍘熷浘</span></button>
                         </div>
                     </div>
                 </div>
                 <div class="image-edit-actions">
-                    <span id="imageEditZoomLabel" style="color:#94a3b8;font-size:11px;font-weight:800;padding:0 4px;margin-right:auto;cursor:pointer;user-select:none" title="双击重置缩放" ondblclick="resetImageEditZoom()">100%</span>
+                    <span id="imageEditZoomLabel" style="color:#94a3b8;font-size:11px;font-weight:800;padding:0 4px;margin-right:auto;cursor:pointer;user-select:none" title="鍙屽嚮閲嶇疆缂╂斁" ondblclick="resetImageEditZoom()">100%</span>
                     <div id="videoFrameTools" class="video-frame-tools" style="display:none">
-                        <button class="image-edit-btn secondary" type="button" onclick="exportVideoFrame('first')"><i data-lucide="skip-back" class="w-4 h-4"></i><span>导出首帧</span></button>
-                        <button class="image-edit-btn primary" type="button" onclick="exportVideoFrame('current')"><i data-lucide="image-down" class="w-4 h-4"></i><span>导出当前帧</span></button>
-                        <button class="image-edit-btn secondary" type="button" onclick="exportVideoFrame('last')"><i data-lucide="skip-forward" class="w-4 h-4"></i><span>导出尾帧</span></button>
+                        <button class="image-edit-btn secondary" type="button" onclick="exportVideoFrame('first')"><i data-lucide="skip-back" class="w-4 h-4"></i><span>瀵煎嚭棣栧抚</span></button>
+                        <button class="image-edit-btn primary" type="button" onclick="exportVideoFrame('current')"><i data-lucide="image-down" class="w-4 h-4"></i><span>瀵煎嚭褰撳墠甯?/span></button>
+                        <button class="image-edit-btn secondary" type="button" onclick="exportVideoFrame('last')"><i data-lucide="skip-forward" class="w-4 h-4"></i><span>瀵煎嚭灏惧抚</span></button>
                     </div>
-                    <button id="imageEditCancelBtn" class="image-edit-btn secondary" type="button" onclick="closeImageEditor()" data-i18n="common.cancel">取消</button>
-                    <button id="imageEditApplyBtn" class="image-edit-btn primary" type="button" onclick="applyImageEdit()"><i data-lucide="crop" class="w-4 h-4"></i><span data-i18n="canvas.applyCrop">应用裁剪</span></button>
+                    <button id="imageEditCancelBtn" class="image-edit-btn secondary" type="button" onclick="closeImageEditor()" data-i18n="common.cancel">鍙栨秷</button>
+                    <button id="imageEditApplyBtn" class="image-edit-btn primary" type="button" onclick="applyImageEdit()"><i data-lucide="crop" class="w-4 h-4"></i><span data-i18n="canvas.applyCrop">搴旂敤瑁佸壀</span></button>
                 </div>
             </div>
         </div>
         <div id="toast" class="toast"></div>
         <div id="mentionPreview" class="mention-preview"><img alt="preview"></div>
     </div>
-    <script src="/static/js/smart-canvas.js?v=2026.08.06.5"></script>
+    <script src="/static/js/smart-canvas.js?v=2026.08.06.6"></script>
 </body>
 </html>

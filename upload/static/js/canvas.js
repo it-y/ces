@@ -14459,7 +14459,10 @@ board.onwheel = e => {
     viewport.x = e.clientX - rect.left - before.x * viewport.scale;
     viewport.y = e.clientY - rect.top - before.y * viewport.scale;
     applyViewport();
-    scheduleLinksRender();
+    // 2026-08-06 性能优化：删除 scheduleLinksRender()。
+    // 连线 SVG 在世界层内，缩放仅改 world 的 CSS transform，连线跟随世界同步缩放，无需重绘。
+    // 图片加载完成后由 refreshGeometryAfterLayout() 自动补画连线（canvas.js:6034），不会残留错位。
+    // 若缩放后出现连线错位/不跟手，把删除的 scheduleLinksRender(); 加回此行即可回退。
     renderSelectionHub();
     scheduleViewportSave();
 };
