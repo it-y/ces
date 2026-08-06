@@ -14459,7 +14459,7 @@ board.onwheel = e => {
     viewport.x = e.clientX - rect.left - before.x * viewport.scale;
     viewport.y = e.clientY - rect.top - before.y * viewport.scale;
     applyViewport();
-    renderLinks();
+    scheduleLinksRender();
     renderSelectionHub();
     scheduleViewportSave();
 };
