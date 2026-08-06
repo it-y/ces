@@ -238,7 +238,7 @@ body.canvas-knife .link-hit { cursor:crosshair !important; }
 body.canvas-knife .node { outline:1px dashed rgba(220,38,38,.45); outline-offset:4px; }
 body.canvas-board-pan,
 body.canvas-board-pan * { cursor:grabbing !important; user-select:none !important; }
-.world { position:absolute; left:0; top:0; width:6000px; height:4000px; transform-origin:0 0; }
+.world { position:absolute; left:0; top:0; width:6000px; height:4000px; transform-origin:0 0; will-change:transform; }
 .links { position:absolute; inset:0; width:6000px; height:4000px; overflow:visible; pointer-events:none; z-index:1; }
 .link { stroke:var(--faint); stroke-width:2.5; fill:none; opacity:.82; pointer-events:none; }
 .link.link-active { stroke:var(--strong); stroke-width:3.4; opacity:1; filter:drop-shadow(0 0 7px rgba(17,24,39,.22)); }
@@ -250,7 +250,7 @@ body.canvas-board-pan * { cursor:grabbing !important; user-select:none !importan
 .link-delete { position:absolute; width:22px; height:22px; border-radius:999px; display:flex; align-items:center; justify-content:center; transform:translate(-50%,-50%); color:#64748b; background:rgba(255,255,255,.94); border:1px solid #e2e8f0; box-shadow:0 8px 20px rgba(15,23,42,.12); opacity:0; pointer-events:none; transition:opacity .14s var(--ease), color .14s var(--ease), border-color .14s var(--ease), background .14s var(--ease); }
 .link-delete.visible,.link-delete.hover { opacity:1; pointer-events:auto; }
 .link-delete.hover { color:#dc2626; border-color:#fecaca; background:#fff5f5; }
-.node { position:absolute; min-width:220px; min-height:96px; border:1px solid var(--line); border-radius:22px; background:var(--card); box-shadow:0 16px 42px var(--shadow); overflow:visible; user-select:none; z-index:2; }
+.node { position:absolute; min-width:220px; min-height:96px; border:1px solid var(--line); border-radius:22px; background:var(--card); box-shadow:0 16px 42px var(--shadow); overflow:visible; user-select:none; z-index:2; content-visibility:auto; contain-intrinsic-size:260px 200px; }
 .node::before { content:""; position:absolute; inset:0; border-radius:inherit; background:var(--card); pointer-events:none; z-index:-1; overflow:hidden; }
 .node.sized { display:flex; flex-direction:column; }
 .node.selected { outline:2px solid var(--strong); outline-offset:2px; }
