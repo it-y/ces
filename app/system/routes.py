@@ -152,7 +152,7 @@ def _extract_upstream_model(item, protocol: str):
     if isinstance(item, str):
         mid = item
     elif isinstance(item, dict):
-        mid = item.get("id") or item.get("name") or item.get("model") or item.get("model_id") or ""
+        mid = item.get("id") or item.get("name") or item.get("model") or item.get("model_id") or item.get("model_name") or ""
         mt = str(item.get("model_type") or "").strip()
     else:
         return "", ""
@@ -200,6 +200,78 @@ def _parse_upstream_models(payload, protocol: str = "openai"):
     return models, image_models, chat_models, video_models
 
 
+def _api_root_url(base_url: str) -> str:
+    """去掉 /v1 /v1beta /api/v3 后缀，得到中转站面板根地址"""
+    u = (base_url or "").strip().rstrip("/")
+    for suffix in ("/v1", "/v1beta", "/api/v3"):
+        if u.endswith(suffix):
+            u = u[: -len(suffix)]
+            break
+    return u.rstrip("/")
+
+
+async def _merge_panel_pricing(client, base_url, api_key, result):
+    """中转站(new-api 类)全量模式：拉取 /api/pricing 上架的模型并合并，标记不可用项"""
+    root = _api_root_url(base_url)
+    if not root:
+        return result
+    try:
+        resp = await client.get(f"{root}/api/pricing", headers=_upstream_model_headers(api_key, "openai"))
+        if resp.status_code != 200:
+            return result
+        rows = resp.json()
+        data = rows.get("data") if isinstance(rows, dict) else rows
+        if not isinstance(data, list):
+            return result
+        pool = {}
+        for r in data:
+            if not isinstance(r, dict):
+                continue
+            mid = str(r.get("model_name") or r.get("id") or r.get("name") or "").strip()
+            if mid:
+                pool.setdefault(mid, str(r.get("model_type") or "").strip())
+        available = set(result.get("all") or [])
+        seen = set()
+        merged = []
+        for mid in result.get("all") or []:
+            if mid and mid not in seen:
+                seen.add(mid)
+                merged.append(mid)
+        for mid in pool:
+            if mid and mid not in seen:
+                seen.add(mid)
+                merged.append(mid)
+        image, chat, video = [], [], []
+        for mid in merged:
+            mt = pool.get(mid) or ""
+            if mt in ("图像", "image"):
+                image.append(mid)
+            elif mt in ("音视频", "视频", "video", "audio"):
+                video.append(mid)
+            elif mt in ("文本", "text", "chat", "llm"):
+                chat.append(mid)
+            else:
+                low = mid.lower()
+                if any(k in low for k in _MODEL_VIDEO_KEYWORDS):
+                    video.append(mid)
+                elif any(k in low for k in _MODEL_IMAGE_KEYWORDS):
+                    image.append(mid)
+                else:
+                    chat.append(mid)
+        return {
+            "total": len(merged),
+            "image_models": image,
+            "chat_models": chat,
+            "video_models": video,
+            "all": merged,
+            "available": sorted(available),
+            "image_request_mode": result.get("image_request_mode", "openai"),
+            "full": True,
+        }
+    except Exception:
+        return result
+
+
 @router.post("/providers/fetch-models")
 async def providers_fetch_models(req: dict):
     protocol = str(req.get("protocol", "") or "openai").strip().lower()
@@ -237,7 +309,7 @@ async def providers_fetch_models(req: dict):
                     return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": [], "error": resp.text[:200], "status": resp.status_code}
                 raw = resp.json()
                 models, image_models, chat_models, video_models = _parse_upstream_models(raw, protocol)
-                return {
+                result = {
                     "total": len(models),
                     "image_models": image_models,
                     "chat_models": chat_models,
@@ -245,6 +317,9 @@ async def providers_fetch_models(req: dict):
                     "all": models,
                     "image_request_mode": req.get("image_request_mode", "openai"),
                 }
+                if req.get("full") and protocol == "openai":
+                    result = await _merge_panel_pricing(client, base_url, api_key, result)
+                return result
             return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": [], "error": last_error}
     except Exception as e:
         return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": [], "error": str(e)}

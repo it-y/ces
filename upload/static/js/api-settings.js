@@ -2829,6 +2829,14 @@ async function testConnection(){
 }
 let lastFetchedAll = [];          // 全部模型 id 列表
 let lastFetchedSuggestion = null; // 后端自动分类建议
+let lastFetchedAvailable = null;  // 全量模式下当前有渠道的模型 id 集合（null=非全量）
+function renderFullFetchHint(){
+    const inp = document.getElementById('fullFetchToggle');
+    if(!inp) return;
+    const hint = inp.closest('.full-fetch-toggle');
+    if(hint) hint.style.borderColor = inp.checked ? 'var(--accent,#4f46e5)' : '';
+}
+renderFullFetchHint();
 
 async function fetchModels(){
     const item = provider();
@@ -2851,7 +2859,8 @@ async function fetchModels(){
                 api_key:apiKey,
                 provider_id:runninghubContext ? 'runninghub' : item.id,
                 protocol:runninghubContext ? 'runninghub' : (protocolInput?.value || 'openai'),
-                image_request_mode:imageRequestModeInput?.value || item.image_request_mode || 'openai'
+                image_request_mode:imageRequestModeInput?.value || item.image_request_mode || 'openai',
+                full: document.getElementById('fullFetchToggle')?.checked || false
             })
         }).then(async r => {
             if(!r.ok) throw new Error((await r.json()).detail || (tr('api.urlInvalid') || '拉取失败'));
@@ -2863,6 +2872,7 @@ async function fetchModels(){
             chat: new Set(data.chat_models || []),
             video: new Set(data.video_models || []),
         };
+        lastFetchedAvailable = (data.available && data.available.length) ? new Set(data.available) : null;
         const detectedProtocol = String(data.protocol || '').toLowerCase();
         if(detectedProtocol && detectedProtocol !== String(protocolInput?.value || '').toLowerCase()){
             applyDetectedProtocol(detectedProtocol);
@@ -2880,7 +2890,9 @@ async function fetchModels(){
             setStatus('拉取失败');
             return;
         }
-        setStatus(`已拉取 ${data.total} 个模型 · 点「选择模型」勾选要导入的${extra}${imageModeExtra}`);
+        const fullOn = document.getElementById('fullFetchToggle')?.checked;
+        const unavailableCount = (lastFetchedAvailable && data.all) ? data.all.filter(id => !lastFetchedAvailable.has(id)).length : 0;
+        setStatus(`已拉取 ${data.total} 个模型${fullOn ? `（其中 ${unavailableCount} 个当前无渠道）` : ''} · 点「选择模型」勾选要导入的${extra}${imageModeExtra}`);
         openModelPicker();
     } catch(e){
         alert('拉取失败：' + (e.message || e));
@@ -2946,12 +2958,15 @@ function renderModelPicker(){
     // 列表
     const html = list.map((id, index) => {
         const checked = pickerState.selected[id];
+        const unavailable = lastFetchedAvailable && !lastFetchedAvailable.has(id);
+        const rowCls = [checked ? 'has-sel' : '', unavailable ? 'picker-row-unavail' : ''].filter(Boolean).join(' ');
         return `
-            <div class="picker-row ${checked?'has-sel':''}" onclick="togglePickerRowByIndex(${index})">
-                <div class="picker-checkbox ${checked?'checked':''}">
+            <div class="picker-row ${rowCls}" onclick="togglePickerRowByIndex(${index})">
+                <div class="picker-checkbox ${checked?'checked':''}" ${unavailable ? 'style="opacity:.45"' : ''}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 </div>
                 <div class="picker-model-name" title="${escapeAttr(id)}">${escapeHtml(id)}</div>
+                ${unavailable ? '<span class="picker-unavail-badge">无渠道</span>' : ''}
             </div>
         `;
     }).join('');

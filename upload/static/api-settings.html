@@ -15,12 +15,12 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.08.06.3"></script>
-    <script src="/static/vendor/js/lucide.js?v=2026.08.06.3"></script>
-    <script src="/static/js/theme.js?v=2026.08.06.3"></script>
-    <script src="/static/js/i18n.js?v=2026.08.06.3"></script>
-    <link rel="stylesheet" href="/static/css/theme.css?v=2026.08.06.3">
-    <link rel="stylesheet" href="/static/css/api-settings.css?v=2026.08.06.3">
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.08.06.4"></script>
+    <script src="/static/vendor/js/lucide.js?v=2026.08.06.4"></script>
+    <script src="/static/js/theme.js?v=2026.08.06.4"></script>
+    <script src="/static/js/i18n.js?v=2026.08.06.4"></script>
+    <link rel="stylesheet" href="/static/css/theme.css?v=2026.08.06.4">
+    <link rel="stylesheet" href="/static/css/api-settings.css?v=2026.08.06.4">
 </head>
 <body>
     <div class="page">
@@ -280,6 +280,10 @@
                             <div class="block-desc" data-i18n="api.modelsDesc">从上游 API 自动拉取所有可用模型并按类型分类（image / chat / video）</div>
                         </div>
                         <div class="models-toolbar-actions">
+                            <label class="full-fetch-toggle" title="勾选后同时拉取中转站上架但当前无渠道的模型，标注「无渠道」">
+                                <input id="fullFetchToggle" type="checkbox" onchange="renderFullFetchHint()">
+                                <span>全量(含无渠道)</span>
+                            </label>
                             <button id="fetchModelsBtn" class="action-btn primary-btn" type="button" onclick="fetchModels()">
                                 <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i><span data-i18n="api.fetchModels">拉取模型</span>
                             </button>
@@ -476,6 +480,6 @@
         </div>
     </div>
 
-    <script src="/static/js/api-settings.js?v=2026.08.06.3"></script>
+    <script src="/static/js/api-settings.js?v=2026.08.06.4"></script>
 </body>
 </html>

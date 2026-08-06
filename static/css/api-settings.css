@@ -250,6 +250,14 @@ body.studio-theme-dark .picker-checkbox.checked { background:#f5f6f8; border-col
 .picker-checkbox.checked svg { opacity:1; }
 .picker-model-name { min-width:0; flex:1; font-size:13px; font-weight:650; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; }
 .picker-row.has-sel .picker-model-name { font-weight:850; }
+.picker-row-unavail { opacity:.55; }
+.picker-row-unavail .picker-model-name { color:var(--muted); text-decoration:line-through; text-decoration-thickness:1px; }
+.picker-unavail-badge { flex:0 0 auto; font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:5px; letter-spacing:.04em; background:rgba(245,158,11,.14); color:#b45309; }
+body.studio-theme-dark .picker-unavail-badge { background:rgba(251,191,36,.16); color:#fbbf24; }
+.full-fetch-toggle { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:750; color:var(--muted); cursor:pointer; padding:4px 10px; border:1px dashed var(--line-strong); border-radius:8px; user-select:none; transition:border-color .15s ease; }
+.full-fetch-toggle:hover { color:var(--text); }
+.full-fetch-toggle input { accent-color:var(--text); cursor:pointer; }
+.full-fetch-toggle:has(input:checked) { color:var(--text); }
 /* 当前模型在其他类别中也被选中时，右侧显示提示标签 */
 .picker-other-cats { display:flex; gap:4px; flex:0 0 auto; }
 .picker-other-tag { font-size:9.5px; font-weight:800; padding:2px 6px; border-radius:5px; letter-spacing:.04em; }
