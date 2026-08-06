@@ -109,41 +109,114 @@ async def test_connection(req: dict):
 
 
 _MODEL_IMAGE_KEYWORDS = (
-    "image", "turbo", "flux", "banana", "dall", "sdxl",
-    "stable", "imagen", "kolors", "midjourney",
-)
-_MODEL_CHAT_KEYWORDS = (
-    "chatgpt", "gpt", "qwen", "gemini", "claude", "llama", "chat",
-    "deepseek", "doubao", "glm", "kimi", "moonshot", "ernie",
-    "mistral", "minimax", "spark", "hunyuan", "baichuan", "yi-", "phi", "abab",
+    "banana", "image", "imagen", "flux", "stable", "sdxl", "midjourney",
+    "dalle", "dall-e", "ideogram", "fal-ai", "z-image", "qwen-image",
+    "klein", "seedream", "doubao-seedream", "text-to-image", "image-to-image",
+    "kolors",
 )
 _MODEL_VIDEO_KEYWORDS = (
-    "veo", "sora", "video", "seedance", "wan", "runway",
-    "kling", "pika", "hunyuan-video",
+    "veo", "sora", "wan2", "wanx", "doubao-seedance", "doubao-1",
+    "kling", "hailuo", "seedance", "hunyuan-video", "runway", "pika",
+    "t2v-", "i2v-", "s2v", "-video",
 )
+
+
+def _upstream_models_url(base_url: str, protocol: str) -> str:
+    """按协议确定模型列表端点，避免拼出 /v1/v1 这类重复路径"""
+    base = (base_url or "").strip().rstrip("/")
+    if not base:
+        return ""
+    p = (protocol or "").lower()
+    if p == "gemini":
+        return f"{base}/models" if base.endswith("/v1beta") else f"{base}/v1beta/models"
+    if p == "volcengine":
+        return f"{base}/models" if base.endswith("/api/v3") else f"{base}/api/v3/models"
+    return f"{base}/models" if base.endswith("/v1") else f"{base}/v1/models"
+
+
+def _upstream_model_headers(api_key: str, protocol: str) -> dict:
+    if (protocol or "").lower() == "gemini":
+        headers = {"Accept": "application/json"}
+        if api_key:
+            headers["x-goog-api-key"] = api_key
+        return headers
+    headers = {"Accept": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    return headers
+
+
+def _extract_upstream_model(item, protocol: str):
+    """兼容字符串 / dict 两种条目，返回 (model_id, model_type)"""
+    mid, mt = "", ""
+    if isinstance(item, str):
+        mid = item
+    elif isinstance(item, dict):
+        mid = item.get("id") or item.get("name") or item.get("model") or item.get("model_id") or ""
+        mt = str(item.get("model_type") or "").strip()
+    else:
+        return "", ""
+    if not mid:
+        return "", mt
+    mid = str(mid).strip()
+    if (protocol or "").lower() == "gemini" and mid.startswith("models/"):
+        mid = mid[len("models/"):]
+    return mid, mt
+
+
+def _parse_upstream_models(payload, protocol: str = "openai"):
+    """解析上游模型响应为 (all, image, chat, video)，互斥分组。"""
+    data = payload
+    if isinstance(data, dict):
+        for key in ("data", "models", "list"):
+            if isinstance(data.get(key), list):
+                data = data[key]
+                break
+        else:
+            data = []
+    if not isinstance(data, list):
+        data = []
+    models, image_models, chat_models, video_models = [], [], [], []
+    seen = set()
+    for item in data:
+        mid, mt = _extract_upstream_model(item, protocol)
+        if not mid or mid in seen:
+            continue
+        seen.add(mid)
+        low = mid.lower()
+        if mt in ("图像", "image"):
+            image_models.append(mid)
+        elif mt in ("音视频", "视频", "video", "audio"):
+            video_models.append(mid)
+        elif mt in ("文本", "text", "chat", "llm"):
+            chat_models.append(mid)
+        elif any(k in low for k in _MODEL_VIDEO_KEYWORDS):
+            video_models.append(mid)
+        elif any(k in low for k in _MODEL_IMAGE_KEYWORDS):
+            image_models.append(mid)
+        else:
+            chat_models.append(mid)
+        models.append(mid)
+    return models, image_models, chat_models, video_models
 
 
 @router.post("/providers/fetch-models")
 async def providers_fetch_models(req: dict):
+    protocol = str(req.get("protocol", "") or "openai").strip().lower()
     provider_id = req.get("provider_id", "") or req.get("id", "")
     provider = await get_provider(provider_id) if provider_id else None
     base = (provider or {}).get("base_url", "").rstrip("/") if provider else ""
     api_key = (provider or {}).get("api_key", "") if provider else ""
-    base_url = req.get("base_url", "").strip() or base
-    api_key = req.get("api_key", "").strip() or api_key
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    base_url = (req.get("base_url", "") or "").strip() or base
+    api_key = (req.get("api_key", "") or "").strip() or api_key
 
-    if not base_url:
+    url = _upstream_models_url(base_url, protocol)
+    if not url:
         return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": []}
-
-    def _model_id(m):
-        if not isinstance(m, dict):
-            return ""
-        return str(m.get("id") or m.get("name") or m.get("model_id") or "").strip()
+    headers = _upstream_model_headers(api_key, protocol)
 
     try:
         async with create_client("normal") as client:
-            url = f"{base_url.rstrip('/')}/v1/models"
             last_error = ""
             for attempt in range(2):
                 try:
@@ -163,14 +236,7 @@ async def providers_fetch_models(req: dict):
                 if resp.status_code != 200:
                     return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": [], "error": resp.text[:200], "status": resp.status_code}
                 raw = resp.json()
-                data = raw.get("data") if isinstance(raw, dict) else raw
-                if not isinstance(data, list):
-                    data = []
-                models = [mid for mid in map(_model_id, data) if mid]
-                # 按名称分类（尽力建议，关键词覆盖主流平台）
-                image_models = [m for m in models if any(k in m.lower() for k in _MODEL_IMAGE_KEYWORDS)]
-                chat_models = [m for m in models if any(k in m.lower() for k in _MODEL_CHAT_KEYWORDS)]
-                video_models = [m for m in models if any(k in m.lower() for k in _MODEL_VIDEO_KEYWORDS)]
+                models, image_models, chat_models, video_models = _parse_upstream_models(raw, protocol)
                 return {
                     "total": len(models),
                     "image_models": image_models,
@@ -196,19 +262,17 @@ async def fetch_models(provider_id: str = ""):
 
     base = provider.get("base_url", "").rstrip("/")
     api_key = provider.get("api_key", "")
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    protocol = str(provider.get("protocol", "") or "openai").strip().lower()
+    url = _upstream_models_url(base, protocol)
+    if not url:
+        return {"models": []}
+    headers = _upstream_model_headers(api_key, protocol)
 
     try:
         async with create_client("normal") as client:
-            resp = await client.get(f"{base}/v1/models", headers=headers)
+            resp = await client.get(url, headers=headers)
             if resp.status_code == 200:
-                raw = resp.json()
-                data = raw.get("data") if isinstance(raw, dict) else raw
-                models = []
-                for m in (data if isinstance(data, list) else []):
-                    mid = str(m.get("id") or m.get("name") or m.get("model_id") or "").strip()
-                    if mid:
-                        models.append(mid)
+                models, _image, _chat, _video = _parse_upstream_models(resp.json(), protocol)
                 return {"models": sorted(models)}
             return {"models": [], "error": resp.text[:200]}
     except Exception as e:
