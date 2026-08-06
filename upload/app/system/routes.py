@@ -14,7 +14,7 @@ from .providers import (
     load_providers, save_providers, get_provider,
     public_provider, mask_secret, provider_api_key,
 )
-from .updater import check_update, download_update, apply_update, rollback_update, schedule_restart, _update_lock
+from .updater import check_update, download_update, apply_update, rollback_update, schedule_restart, _update_lock, is_electron
 from ..config import current_app_version, GITHUB_REPO_URL, MODELSCOPE_REPO_URL, DATA_DIR
 from ..core.http_client import create_client
 from ..core.websocket import manager as ws_manager
@@ -108,6 +108,21 @@ async def test_connection(req: dict):
     return await providers_test_connection(req)
 
 
+_MODEL_IMAGE_KEYWORDS = (
+    "image", "turbo", "flux", "banana", "dall", "sdxl",
+    "stable", "imagen", "kolors", "midjourney",
+)
+_MODEL_CHAT_KEYWORDS = (
+    "chatgpt", "gpt", "qwen", "gemini", "claude", "llama", "chat",
+    "deepseek", "doubao", "glm", "kimi", "moonshot", "ernie",
+    "mistral", "minimax", "spark", "hunyuan", "baichuan", "yi-", "phi", "abab",
+)
+_MODEL_VIDEO_KEYWORDS = (
+    "veo", "sora", "video", "seedance", "wan", "runway",
+    "kling", "pika", "hunyuan-video",
+)
+
+
 @router.post("/providers/fetch-models")
 async def providers_fetch_models(req: dict):
     provider_id = req.get("provider_id", "") or req.get("id", "")
@@ -121,16 +136,41 @@ async def providers_fetch_models(req: dict):
     if not base_url:
         return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": []}
 
+    def _model_id(m):
+        if not isinstance(m, dict):
+            return ""
+        return str(m.get("id") or m.get("name") or m.get("model_id") or "").strip()
+
     try:
         async with create_client("normal") as client:
-            resp = await client.get(f"{base_url.rstrip('/')}/v1/models", headers=headers)
-            if resp.status_code == 200:
+            url = f"{base_url.rstrip('/')}/v1/models"
+            last_error = ""
+            for attempt in range(2):
+                try:
+                    resp = await client.get(url, headers=headers)
+                except Exception as e:
+                    last_error = str(e)
+                    if attempt == 0:
+                        await asyncio.sleep(1.0)
+                        continue
+                    break
+                if resp.status_code in (429,) or resp.status_code >= 500:
+                    last_error = f"HTTP {resp.status_code}"
+                    if attempt == 0:
+                        await asyncio.sleep(1.0)
+                        continue
+                    return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": [], "error": last_error, "status": resp.status_code}
+                if resp.status_code != 200:
+                    return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": [], "error": resp.text[:200], "status": resp.status_code}
                 raw = resp.json()
-                models = [m.get("id", "") for m in raw.get("data", []) if m.get("id")]
-                # 按名称分类
-                image_models = [m for m in models if any(k in m.lower() for k in ("image", "turbo", "flux", "banana"))]
-                chat_models = [m for m in models if any(k in m.lower() for k in ("gpt", "qwen", "gemini", "claude", "llama", "chat"))]
-                video_models = [m for m in models if any(k in m.lower() for k in ("veo", "sora", "video", "seedance"))]
+                data = raw.get("data") if isinstance(raw, dict) else raw
+                if not isinstance(data, list):
+                    data = []
+                models = [mid for mid in map(_model_id, data) if mid]
+                # 按名称分类（尽力建议，关键词覆盖主流平台）
+                image_models = [m for m in models if any(k in m.lower() for k in _MODEL_IMAGE_KEYWORDS)]
+                chat_models = [m for m in models if any(k in m.lower() for k in _MODEL_CHAT_KEYWORDS)]
+                video_models = [m for m in models if any(k in m.lower() for k in _MODEL_VIDEO_KEYWORDS)]
                 return {
                     "total": len(models),
                     "image_models": image_models,
@@ -139,7 +179,7 @@ async def providers_fetch_models(req: dict):
                     "all": models,
                     "image_request_mode": req.get("image_request_mode", "openai"),
                 }
-            return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": [], "error": resp.text[:200]}
+            return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": [], "error": last_error}
     except Exception as e:
         return {"total": 0, "image_models": [], "chat_models": [], "video_models": [], "all": [], "error": str(e)}
 
@@ -162,8 +202,13 @@ async def fetch_models(provider_id: str = ""):
         async with create_client("normal") as client:
             resp = await client.get(f"{base}/v1/models", headers=headers)
             if resp.status_code == 200:
-                data = resp.json()
-                models = [m.get("id", "") for m in data.get("data", [])]
+                raw = resp.json()
+                data = raw.get("data") if isinstance(raw, dict) else raw
+                models = []
+                for m in (data if isinstance(data, list) else []):
+                    mid = str(m.get("id") or m.get("name") or m.get("model_id") or "").strip()
+                    if mid:
+                        models.append(mid)
                 return {"models": sorted(models)}
             return {"models": [], "error": resp.text[:200]}
     except Exception as e:
@@ -181,11 +226,26 @@ async def api_check_update():
 async def api_update(req: UpdateRequest):
     if _update_lock.locked():
         raise HTTPException(409, detail="更新或回滚操作正在进行中")
+    try:
         staging = await download_update(source=req.source, fallback=req.fallback)
         result = await apply_update(staging, declared_version=req.version)
-    if req.auto_restart:
-        schedule_restart()
-    return result
+        if req.auto_restart:
+            if is_electron():
+                result["electron_relaunch"] = True
+                result["restart_scheduled"] = False
+            else:
+                schedule_restart()
+        return result
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        detail = f"{type(e).__name__}: {e}"
+        log_path = DATA_DIR / "update_error.log"
+        try:
+            log_path.write_text(f"[{__import__('time').strftime('%Y-%m-%d %H:%M:%S')}] {detail}\n{tb}\n", encoding="utf-8")
+        except Exception:
+            pass
+        raise HTTPException(500, detail=detail)
 
 
 @router.get("/update-backups")
@@ -203,7 +263,11 @@ async def api_rollback(req: RollbackRequest):
         raise HTTPException(409, detail="更新或回滚操作正在进行中")
     result = await rollback_update(req.name)
     if req.auto_restart:
-        schedule_restart()
+        if is_electron():
+            result["electron_relaunch"] = True
+            result["restart_scheduled"] = False
+        else:
+            schedule_restart()
     return result
 
 
@@ -242,6 +306,39 @@ async def api_config_token():
         "has_api_key": bool(AI_API_KEY),
         "has_ms_key": bool(MODELSCOPE_API_KEY),
     }
+
+
+@router.get("/settings/github-token")
+async def api_get_github_token():
+    """返回 GitHub Token 是否存在"""
+    from ..config import SETTINGS_PATH
+    token = ""
+    try:
+        if SETTINGS_PATH.exists():
+            data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+            token = data.get("github_token", "")
+    except Exception:
+        pass
+    return {"has_token": bool(token), "token": token}
+
+
+@router.post("/settings/github-token")
+async def api_set_github_token(req: TokenRequest):
+    """保存 GitHub Token 到 settings.json"""
+    from ..config import SETTINGS_PATH
+    data = {}
+    SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if SETTINGS_PATH.exists():
+        data = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+    data["github_token"] = req.token
+    import tempfile, os
+    tmp = SETTINGS_PATH.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    os.replace(str(tmp), str(SETTINGS_PATH))
+    # 清除缓存
+    from .updater import _GITHUB_AUTH_CACHE
+    _GITHUB_AUTH_CACHE.pop("headers", None)
+    return {"ok": True}
 
 
 @router.get("/queue_status")
@@ -438,17 +535,19 @@ async def api_probe_async(req: dict):
 @router.post("/update-connectivity")
 async def api_update_connectivity(req: dict):
     from ..config import GITHUB_VERSION_URL, MODELSCOPE_VERSION_URL
+    from .updater import _github_auth_headers
 
-    async def _probe(url: str) -> bool:
+    async def _probe(label: str, url: str) -> bool:
         try:
+            headers = _github_auth_headers() if label == "github" else {}
             async with create_client("quick") as client:
-                resp = await client.head(url, timeout=5)
+                resp = await client.head(url, headers=headers, timeout=5)
                 return resp.status_code < 500
         except Exception:
             return False
 
     github, modelscope = await asyncio.gather(
-        _probe(GITHUB_VERSION_URL), _probe(MODELSCOPE_VERSION_URL),
+        _probe("github", GITHUB_VERSION_URL), _probe("modelscope", MODELSCOPE_VERSION_URL),
     )
     return {"github": github, "modelscope": modelscope}
 

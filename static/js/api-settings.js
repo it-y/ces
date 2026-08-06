@@ -2875,6 +2875,11 @@ async function fetchModels(){
             ? ` · RunningHub OpenAPI${runninghubModelSourceNote(data)}`
             : (detectedProtocol === 'volcengine' || isVolcengineProvider(item)) ? ' · 已识别方舟协议，火山聊天建议改填 ep-... 接入点' : '';
         const imageModeExtra = normalizeImageRequestMode(imageRequestModeInput?.value || item.image_request_mode) === 'openai-json' ? ' · 图片接口已设为 OpenAI JSON' : '';
+        if(!data.total || !(data.all || []).length){
+            alert('拉取失败：' + (data.error || '上游未返回任何模型'));
+            setStatus('拉取失败');
+            return;
+        }
         setStatus(`已拉取 ${data.total} 个模型 · 点「选择模型」勾选要导入的${extra}${imageModeExtra}`);
         openModelPicker();
     } catch(e){
@@ -2973,6 +2978,15 @@ function togglePickerRowByIndex(index){
 function selectPickerCat(cat){
     document.querySelectorAll('.picker-cat-tab').forEach(t => t.classList.toggle('active', t.dataset.cat === cat));
     renderModelPicker();
+}
+function toggleSelectAllPicker(){
+    const ids = Object.keys(pickerState.selected);
+    if(!ids.length) return;
+    const allOn = ids.every(id => pickerState.selected[id]);
+    ids.forEach(id => { pickerState.selected[id] = !allOn; });
+    renderModelPicker();
+    const btn = document.getElementById('pickerToggleAll');
+    if(btn) btn.textContent = allOn ? '全选' : '取消全选';
 }
 function applyModelPicker(){
     const item = provider(); if(!item) return;
