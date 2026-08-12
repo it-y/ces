@@ -236,13 +236,13 @@ async def api_canvas_llm(req: CanvasLLMRequest):
     if not provider:
         raise HTTPException(400, f"供应商 {req.provider} 不存在")
 
-    model = req.model or provider.get("chat_models", [""])[0]
+    chat_models = provider.get("chat_models") or []
+    model = req.model or (chat_models[0] if chat_models else "gpt-4o-mini")
     messages = req.messages or [{"role": "user", "content": req.message}]
 
     # 将相对路径图片转为 base64（外部 LLM 访问不了 localhost）
     import base64, urllib.parse
     from io import BytesIO
-    from PIL import Image
     from ..config import OUTPUT_DIR, UPLOAD_DIR, CANVAS_FILES_DIR
     async def _resolve_image(url: str, max_size: int = 1024) -> str:
         if url.startswith("data:") or url.startswith("http://") or url.startswith("https://"):
@@ -266,6 +266,7 @@ async def api_canvas_llm(req: CanvasLLMRequest):
         if not path.is_file(): return url
         raw = await asyncio.to_thread(path.read_bytes)
         try:
+            from PIL import Image
             img = Image.open(BytesIO(raw))
             img.load()
             w, h = img.size
@@ -305,17 +306,34 @@ async def api_canvas_llm(req: CanvasLLMRequest):
     api_key = provider.get("api_key", "")
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
-    async with create_client("long") as client:
-        resp = await client.post(
-            f"{api_root}/v1/chat/completions",
-            json={"model": model, "messages": messages},
-            headers=headers,
-        )
+    if not api_root:
+        raise HTTPException(400, "LLM 供应商未配置 base_url，请在 API 设置中填写")
 
-    if resp.status_code != 200:
-        raise HTTPException(resp.status_code, f"LLM 调用失败: {resp.text[:200]}")
+    try:
+        async with create_client("long") as client:
+            resp = await client.post(
+                f"{api_root}/v1/chat/completions",
+                json={"model": model, "messages": messages},
+                headers=headers,
+            )
 
-    data = resp.json()
+        if resp.status_code != 200:
+            raise HTTPException(resp.status_code, f"LLM 调用失败: {resp.text[:200]}")
+
+        data = resp.json()
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        detail = f"LLM 请求异常: {e}"
+        try:
+            detail += f"\nURL: {api_root}/v1/chat/completions"
+            detail += f"\nModel: {model}"
+        except Exception:
+            pass
+        print(f"[LLM ERROR] {detail}\n{traceback.format_exc()}")
+        raise HTTPException(502, detail)
+
     content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
     # 如果有 canvas_id，在画布上添加文本节点
