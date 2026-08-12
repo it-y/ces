@@ -209,12 +209,28 @@ def load_github_token() -> str:
     GITHUB_TOKEN = token
     return token
 
-MODELSCOPE_REPO_URL = ""
-MODELSCOPE_RAW_ROOT = ""
-MODELSCOPE_FILE_API_ROOT = ""
-MODELSCOPE_VERSION_URL = ""
+MODELSCOPE_DATASET_ID = "ytk001/ces"
+MODELSCOPE_REPO_URL = f"https://www.modelscope.cn/datasets/{MODELSCOPE_DATASET_ID}"
+MODELSCOPE_VERSION_URL = f"https://www.modelscope.cn/api/v1/datasets/{MODELSCOPE_DATASET_ID}/repo/files/VERSION"
+MODELSCOPE_TREE_URL = f"https://www.modelscope.cn/api/v1/datasets/{MODELSCOPE_DATASET_ID}/repo/files"
+MODELSCOPE_FILE_API_ROOT = f"https://www.modelscope.cn/api/v1/datasets/{MODELSCOPE_DATASET_ID}/repo/files/"
 MODELSCOPE_UPDATE_NOTES_URL = ""
-MODELSCOPE_TREE_URL = ""
+MODELSCOPE_TOKEN = ""
+
+def load_modelscope_token() -> str:
+    """加载 ModelScope API token（优先环境变量，其次 settings.json）"""
+    global MODELSCOPE_TOKEN
+    token = os.getenv("MODELSCOPE_TOKEN", "")
+    if not token:
+        try:
+            sp = SETTINGS_PATH
+            if sp.exists():
+                data = json.loads(sp.read_text(encoding="utf-8"))
+                token = data.get("modelscope_token", "")
+        except Exception:
+            pass
+    MODELSCOPE_TOKEN = token
+    return token
 
 # ============================================================
 # 应用信息
