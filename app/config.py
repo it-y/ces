@@ -211,9 +211,9 @@ def load_github_token() -> str:
 
 MODELSCOPE_DATASET_ID = "ytk001/ces"
 MODELSCOPE_REPO_URL = f"https://www.modelscope.cn/datasets/{MODELSCOPE_DATASET_ID}"
-MODELSCOPE_VERSION_URL = f"https://www.modelscope.cn/api/v1/datasets/{MODELSCOPE_DATASET_ID}/repo/files/VERSION"
-MODELSCOPE_TREE_URL = f"https://www.modelscope.cn/api/v1/datasets/{MODELSCOPE_DATASET_ID}/repo/files"
-MODELSCOPE_FILE_API_ROOT = f"https://www.modelscope.cn/api/v1/datasets/{MODELSCOPE_DATASET_ID}/repo/files/"
+MODELSCOPE_VERSION_URL = f"https://www.modelscope.cn/api/v1/datasets/{MODELSCOPE_DATASET_ID}/repo?Revision=master&FilePath=VERSION"
+MODELSCOPE_TREE_URL = f"https://www.modelscope.cn/api/v1/datasets/{MODELSCOPE_DATASET_ID}/repo/tree?Revision=master&Recursive=true"
+MODELSCOPE_FILE_API_ROOT = f"https://www.modelscope.cn/api/v1/datasets/{MODELSCOPE_DATASET_ID}/repo?Revision=master&FilePath="
 MODELSCOPE_UPDATE_NOTES_URL = ""
 MODELSCOPE_TOKEN = ""
 

@@ -88,19 +88,8 @@ async def check_update() -> dict:
             async with create_client("quick") as client:
                 resp = await client.get(url, headers=headers)
                 if resp.status_code == 200:
-                    if label == "modelscope":
-                        # 魔搭 API 返回 JSON，文件内容在 OSS URL
-                        data = resp.json()
-                        if data.get("Code") == 200:
-                            oss_url = data.get("Data", {}).get("Url", "")
-                            if oss_url:
-                                resp2 = await client.get(oss_url)
-                                if resp2.status_code == 200:
-                                    version = resp2.text.strip().splitlines()[0].strip()
-                                    return {"source": label, "version": version}
-                    else:
-                        version = resp.text.strip().splitlines()[0].strip()
-                        return {"source": label, "version": version}
+                    version = resp.text.strip().splitlines()[0].strip()
+                    return {"source": label, "version": version}
         except Exception:
             pass
         return None
@@ -224,19 +213,25 @@ async def _fetch_github_file_list() -> list[str]:
 async def _fetch_modelscope_file_list() -> list[str]:
     headers = _modelscope_auth_headers()
     async with create_client("normal") as client:
-        resp = await client.get(MODELSCOPE_TREE_URL, headers=headers)
-        if resp.status_code != 200:
-            raise RuntimeError(f"ModelScope tree returned {resp.status_code}")
-        data = resp.json()
-        # 魔搭 API 格式: {"Code": 200, "Data": {"Files": [{"Path": "...", "Type": "blob"}, ...]}}
-        files = data.get("Data", {}).get("Files", [])
-        if not files:
-            # 兼容旧格式: {"Data": [{"Path": "...", "Type": "blob"}, ...]}
-            files = data.get("Data", [])
-        return [
-            item.get("Path", "") for item in files
-            if isinstance(item, dict) and item.get("Type") == "blob" and item.get("Path")
-        ]
+        all_files = []
+        page = 1
+        while True:
+            url = f"{MODELSCOPE_TREE_URL}&PageNumber={page}&PageSize=100"
+            resp = await client.get(url, headers=headers)
+            if resp.status_code != 200:
+                raise RuntimeError(f"ModelScope tree returned {resp.status_code}")
+            data = resp.json()
+            files = data.get("Data", {}).get("Files", [])
+            if not files:
+                break
+            for item in files:
+                if isinstance(item, dict) and item.get("Type") == "blob" and item.get("Path"):
+                    all_files.append(item["Path"])
+            total = data.get("Data", {}).get("TotalCount") or data.get("TotalCount", 0)
+            if len(all_files) >= total:
+                break
+            page += 1
+        return all_files
 
 
 async def _download_files(source: str, files: list[str], staging: Path):
@@ -244,34 +239,15 @@ async def _download_files(source: str, files: list[str], staging: Path):
     ms_headers = _modelscope_auth_headers() if source == "modelscope" else {}
 
     async def download_one(path: str):
-        if source == "github":
-            url = f"{GITHUB_RAW_ROOT}/{path}"
-            async with create_client("normal") as client:
-                resp = await client.get(url, headers=gh_headers)
-                if resp.status_code != 200:
-                    raise RuntimeError(f"Download failed ({resp.status_code}): {path}")
-                dest = staging / path
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_bytes(resp.content)
-        else:
-            # 魔搭：先拿 OSS 下载地址，再从 OSS 下载原始文件
-            api_url = f"{MODELSCOPE_FILE_API_ROOT}{path}"
-            async with create_client("normal") as client:
-                # Step 1: 获取 OSS 下载 URL
-                resp = await client.get(api_url, headers=ms_headers)
-                if resp.status_code != 200:
-                    raise RuntimeError(f"ModelScope API returned {resp.status_code} for {path}")
-                data = resp.json()
-                oss_url = data.get("Data", {}).get("Url", "")
-                if not oss_url:
-                    raise RuntimeError(f"ModelScope: no download URL for {path}")
-                # Step 2: 从 OSS 下载文件
-                resp2 = await client.get(oss_url)
-                if resp2.status_code != 200:
-                    raise RuntimeError(f"ModelScope OSS download failed ({resp2.status_code}): {path}")
-                dest = staging / path
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_bytes(resp2.content)
+        url = f"{GITHUB_RAW_ROOT}/{path}" if source == "github" else f"{MODELSCOPE_FILE_API_ROOT}{path}"
+        headers = gh_headers if source == "github" else ms_headers
+        async with create_client("normal") as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Download failed ({resp.status_code}): {path}")
+            dest = staging / path
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(resp.content)
 
     await asyncio.gather(*[download_one(f) for f in files])
 
