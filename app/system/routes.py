@@ -692,8 +692,21 @@ async def api_update_connectivity(req: dict):
 
 
 @router.get("/update-connectivity/probe")
-async def api_probe_connectivity():
-    raise HTTPException(501, "该功能尚未实现")
+async def api_probe_connectivity(url: str = ""):
+    import time
+    if not url:
+        raise HTTPException(400, "Missing url parameter")
+    start = time.monotonic()
+    try:
+        async with create_client("quick") as client:
+            resp = await client.head(url)
+            elapsed = int((time.monotonic() - start) * 1000)
+            return {"ok": resp.status_code < 500, "status": resp.status_code,
+                    "elapsed_ms": elapsed, "error": ""}
+    except Exception as e:
+        elapsed = int((time.monotonic() - start) * 1000)
+        return {"ok": False, "status": 0, "elapsed_ms": elapsed,
+                "error": str(e)[:200]}
 
 
 FOLDER_MAP = {}

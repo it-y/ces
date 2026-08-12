@@ -198,12 +198,26 @@ async def index():
 
 @app.get("/api/app-info")
 async def app_info():
+    from .config import (
+        GITHUB_VERSION_URL, GITHUB_TREE_URL, GITHUB_RAW_ROOT,
+        MODELSCOPE_VERSION_URL, MODELSCOPE_REPO_URL,
+    )
     return {
         "app": PROJECT_NAME,
         "version": current_app_version(),
         "status": "running",
         "features": ["canvas", "generation", "assets", "comfyui"],
         "data_dir": str(CANVAS_DIR.parent),
+        "sources": {
+            "github": {
+                "version_url": GITHUB_VERSION_URL,
+                "tree_url": GITHUB_TREE_URL,
+            },
+            "modelscope": {
+                "version_url": MODELSCOPE_VERSION_URL,
+                "repo_url": MODELSCOPE_REPO_URL,
+            },
+        },
     }
 
 
