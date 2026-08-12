@@ -171,29 +171,9 @@ async function startBackend() {
     const args = ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(backendPort)];
     appendLog('Starting: ' + pythonPath + ' ' + args.join(' ') + ' (cwd=' + dir + ')');
     const backendEnv = { ...process.env, PYTHONUNBUFFERED: '1', ELECTRON_RUN: '1' };
-    if (!backendEnv.HTTP_PROXY && !backendEnv.http_proxy) {
-      const fs = require('fs');
-      const regPath = 'C:\\Windows\\System32\\reg.exe';
-      if (fs.existsSync(regPath)) {
-        const { execSync } = require('child_process');
-        try {
-          const out = execSync(
-            `"${regPath}" query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" /v ProxyServer`,
-            { encoding: 'utf8', timeout: 3000 }
-          ).trim();
-          const m = out.match(/ProxyServer\s+REG_SZ\s+(\S+)/);
-          if (m) {
-            const proxyHost = m[1].trim();
-            const proxyUrl = proxyHost.includes('://') ? proxyHost : 'http://' + proxyHost;
-            backendEnv.HTTP_PROXY = proxyUrl;
-            backendEnv.HTTPS_PROXY = proxyUrl;
-            backendEnv.http_proxy = proxyUrl;
-            backendEnv.https_proxy = proxyUrl;
-            backendEnv.NO_PROXY = '127.0.0.1,localhost';
-          }
-        } catch(e) {}
-      }
-    }
+    // 不再自动读取 Windows 系统代理。
+    // 原因：VPN 客户端关闭后注册表代理经常残留，导致所有请求走死代理，
+    // 连国内直连的 API 也全部超时。用户如需代理请在系统环境变量中显式设置 HTTP_PROXY。
     backendProcess = spawn(pythonPath, args, {
       cwd: dir,
       stdio: ['pipe', 'pipe', 'pipe'],

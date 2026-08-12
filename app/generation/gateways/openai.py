@@ -7,14 +7,11 @@ OpenAI 兼容协议网关 — 支持 OpenAI/Apimart/Gemini-compatible 等。
   - HTTP/1.1 兼容（中转站常见不支持 HTTP/2）
 """
 
-import asyncio
 import base64
 import json
 import time
 from typing import Optional
 from pathlib import Path
-
-from httpx import HTTPError, HTTPStatusError
 
 from ...core.http_client import create_client
 from ...core.errors import friendly_image_error_detail
@@ -53,29 +50,13 @@ class OpenAIGateway:
     # ---- retry 请求包装 ----
 
     async def _post_with_retry(self, url: str, **kwargs) -> dict:
-        """带指数退避重试的 POST 请求，返回 JSON 响应体"""
-        async with create_client("long") as client:
-            last_exc = None
-            for attempt in range(3):
-                try:
-                    resp = await client.post(url, **kwargs)
-                    if resp.status_code >= 500:
-                        msg = friendly_image_error_detail(resp.text, resp.url.path, "")
-                        raise HTTPStatusError(msg, request=resp.request, response=resp)
-                    if resp.status_code != 200:
-                        msg = friendly_image_error_detail(resp.text, resp.url.path, "")
-                        raise ImageGenerationError(msg, resp.status_code)
-                    return resp.json()
-                except (HTTPError, HTTPStatusError) as e:
-                    last_exc = e
-                    if attempt < 2:
-                        await asyncio.sleep(2 ** attempt)
-                        continue
-                    raise
-                except ImageGenerationError:
-                    raise
-
-            raise last_exc  # unreachable
+        """直连优先 + 代理兜底 POST 请求，返回 JSON 响应体"""
+        from ...core.http_client import request_with_fallback
+        resp = await request_with_fallback("POST", url, timeout_preset="long", **kwargs)
+        if resp.status_code != 200:
+            msg = friendly_image_error_detail(resp.text, url, "")
+            raise ImageGenerationError(msg, resp.status_code)
+        return resp.json()
 
     # ---- 简单生成（无参考图） ----
 

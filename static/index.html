@@ -23,11 +23,11 @@
             } catch(e) {}
         })();
     </script>
-    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.08.12.1"></script>
-    <script src="/static/js/theme.js?v=2026.08.12.1"></script>
-    <script src="/static/js/i18n.js?v=2026.08.12.1"></script>
+    <script src="/static/vendor/js/tailwindcss-cdn.js?v=2026.08.12.2"></script>
+    <script src="/static/js/theme.js?v=2026.08.12.2"></script>
+    <script src="/static/js/i18n.js?v=2026.08.12.2"></script>
     <style>
-        @import url('/static/vendor/css/fonts.css?v=2026.08.12.1');
+        @import url('/static/vendor/css/fonts.css?v=2026.08.12.2');
 
         /* 本地 Tailwind 工具类兜底：CDN 慢/未就绪时也能立刻给图标尺寸，避免首屏左侧栏空白 */
         .w-1\.5 { width: 0.375rem; }
@@ -1076,11 +1076,11 @@
         </header>
 
         <main class="stage">
-            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.08.12.1" scrolling="yes"></iframe>
+            <iframe id="frame-asset-manager" data-src="/static/asset-manager.html?v=2026.08.12.2" scrolling="yes"></iframe>
 
-            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=2026.08.12.1" scrolling="yes"></iframe>
-            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.08.12.1" scrolling="yes"></iframe>
-            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.08.12.1" class="active" scrolling="yes"></iframe>
+            <iframe id="frame-comfyui-settings" data-src="/static/comfyui-settings.html?v=2026.08.12.2" scrolling="yes"></iframe>
+            <iframe id="frame-api-settings" data-src="/static/api-settings.html?v=2026.08.12.2" scrolling="yes"></iframe>
+            <iframe id="frame-canvas" data-src="/static/canvas-list.html?v=2026.08.12.2" class="active" scrolling="yes"></iframe>
 
         </main>
     </div>
@@ -2263,21 +2263,9 @@
                         if(d.latest?.version) best = {source:d.latest.source, version:d.latest.version, update_notes:d.latest.update_notes || d.update_notes || null};
                     }
                 } catch(e) {}
-                // 兜底：旧后端无 /api/check-update 时，浏览器直接拉取双源 VERSION
-                if(!serverChecked) {
-                    const sources = appInfo.sources || {};
-                    const candidates = [
-                        {source:'github', url:sources.github?.version_url || appInfo.version_url || ''},
-                        {source:'modelscope', url:sources.modelscope?.version_url || ''},
-                    ].filter(item => item.url);
-                    for(const item of candidates) {
-                        try {
-                            const remoteText = await fetch(`${item.url}${item.url.includes('?') ? '&' : '?'}t=${Date.now()}`, { cache:'no-store' }).then(r => r.ok ? r.text() : '');
-                            const remote = String(remoteText || '').trim().split(/\r?\n/)[0].trim();
-                            if(remote){ reachable = true; if(!best || compareVersions(remote, best.version) > 0) best = {source:item.source, version:remote}; }
-                        } catch(e) {}
-                    }
-                }
+                // 不再从浏览器直连 GitHub。
+                // 国内 raw.githubusercontent.com 被墙，fetch() 会挂起 30-120 秒，
+                // 影响页面启动体验。更新检查统一走后端 /api/check-update。
                 const hasUpdate = !!(current && best?.version && compareVersions(best.version, current) > 0);
                 if(hasUpdate) {
                     if(best.source === 'modelscope') setUpdateSource('modelscope');

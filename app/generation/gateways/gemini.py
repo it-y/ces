@@ -51,8 +51,8 @@ class GeminiGateway:
             },
         }
 
-        async with create_client("long") as client:
-            resp = await client.post(url, json=body)
+        from ...core.http_client import request_with_fallback
+        resp = await request_with_fallback("POST", url, timeout_preset="long", json=body)
 
         if resp.status_code != 200:
             raise Exception(friendly_image_error_detail(resp.text, size, model))

@@ -24,7 +24,7 @@ class AIReference(BaseModel):
 
 class OnlineImageRequest(BaseModel):
     prompt: str = Field(max_length=20000)
-    provider_id: str = "comfly"
+    provider_id: str = ""
     model: str = ""
     size: str = "1024x1024"
     quality: str = "auto"
@@ -45,7 +45,7 @@ class ImageTaskQueryRequest(BaseModel):
 
 class CanvasVideoRequest(BaseModel):
     prompt: str = Field(max_length=4000)
-    provider_id: str = "comfly"
+    provider_id: str = ""
     model: str = ""
     duration: int = Field(default=5, ge=1, le=60)
     aspect_ratio: str = "16:9"
@@ -72,7 +72,7 @@ class CanvasLLMRequest(BaseModel):
     system_prompt: str = ""
     model: str = ""
     messages: list = Field(default_factory=list)
-    provider: str = "comfly"
+    provider: str = ""
     ms_model: str = ""
     images: list = Field(default_factory=list)
     videos: list = Field(default_factory=list)

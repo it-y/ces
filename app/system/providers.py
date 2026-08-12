@@ -37,7 +37,7 @@ def _default_providers() -> list[dict]:
             "base_url": COMFLY_BASE_URL,
             "image_request_mode": "openai",
             "enabled": True,
-            "primary": True,
+            "primary": False,
             "image_models": ["gpt-image-2", "gemini-3.1-flash-image-preview-2k", "nano-banana-pro"],
             "chat_models": ["gpt-4o-mini", "gemini-3.1-flash-image-preview-2k", "gpt-4.1"],
             "video_models": ["veo2", "veo2-fast", "veo3", "veo3-fast"],

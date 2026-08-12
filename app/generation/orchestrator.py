@@ -35,14 +35,16 @@ async def generate_image(
     model: str = "",
     quality: str = "auto",
     n: int = 1,
-    provider_id: str = "comfly",
+    provider_id: str = "",
     reference_images: list | None = None,
     canvas_id: str | None = None,
     client_id: str | None = None,
 ) -> dict:
+    if not provider_id:
+        raise ValueError("请选择供应商")
     provider = await get_provider(provider_id)
     if not provider:
-        raise ValueError(f"供应商 {provider_id} 不存在")
+        raise ValueError(f"供应商 {provider_id} 不存在，请在 API 设置中配置")
 
     proto = effective_protocol(provider, model)
     if not model:
@@ -289,7 +291,7 @@ def _default_model(provider: dict) -> str:
 
 async def generate_video(
     prompt: str,
-    provider_id: str = "comfly",
+    provider_id: str = "",
     model: str = "",
     duration: int = 5,
     aspect_ratio: str = "16:9",
@@ -302,9 +304,11 @@ async def generate_video(
     client_id: str | None = None,
     **kwargs,
 ) -> dict:
+    if not provider_id:
+        raise ValueError("请选择供应商")
     provider = await get_provider(provider_id)
     if not provider:
-        raise ValueError(f"供应商 {provider_id} 不存在")
+        raise ValueError(f"供应商 {provider_id} 不存在，请在 API 设置中配置")
 
     proto = effective_protocol(provider, model)
     if not model:

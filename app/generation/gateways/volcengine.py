@@ -7,7 +7,6 @@ import hmac
 import json
 import datetime
 import uuid
-from ...core.http_client import create_client
 from ...core.errors import friendly_image_error_detail
 
 
@@ -40,8 +39,8 @@ class VolcengineGateway:
         body_str = json.dumps(body, ensure_ascii=False)
         headers = self._sign_headers(body_str)
 
-        async with create_client("long") as client:
-            resp = await client.post(self._endpoint(), content=body_str, headers=headers)
+        from ...core.http_client import request_with_fallback
+        resp = await request_with_fallback("POST", self._endpoint(), timeout_preset="long", content=body_str, headers=headers)
 
         if resp.status_code != 200:
             raise Exception(friendly_image_error_detail(resp.text, size, model))

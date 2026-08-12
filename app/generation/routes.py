@@ -232,9 +232,11 @@ async def api_canvas_llm(req: CanvasLLMRequest):
 
     from ..canvas.context import resolve_canvas_id
     req.canvas_id = resolve_canvas_id(req.canvas_id, None)
+    if not req.provider:
+        raise HTTPException(400, "请选择 LLM 供应商")
     provider = await get_provider(req.provider)
     if not provider:
-        raise HTTPException(400, f"供应商 {req.provider} 不存在")
+        raise HTTPException(400, f"供应商 {req.provider} 不存在，请在 API 设置中配置")
 
     chat_models = provider.get("chat_models") or []
     model = req.model or (chat_models[0] if chat_models else "gpt-4o-mini")
@@ -309,30 +311,45 @@ async def api_canvas_llm(req: CanvasLLMRequest):
     if not api_root:
         raise HTTPException(400, "LLM 供应商未配置 base_url，请在 API 设置中填写")
 
-    try:
-        async with create_client("long") as client:
-            resp = await client.post(
-                f"{api_root}/v1/chat/completions",
-                json={"model": model, "messages": messages},
-                headers=headers,
-            )
+    last_error = None
+    data = None
+    async with create_client("long") as client:
+        for attempt in range(3):
+            try:
+                resp = await client.post(
+                    f"{api_root}/v1/chat/completions",
+                    json={"model": model, "messages": messages},
+                    headers=headers,
+                )
+                if resp.status_code >= 500:
+                    last_error = f"LLM 服务端错误 ({resp.status_code}): {resp.text[:200]}"
+                    if attempt < 2:
+                        await asyncio.sleep(2 ** attempt)
+                        continue
+                    raise HTTPException(resp.status_code, last_error)
+                if resp.status_code != 200:
+                    raise HTTPException(resp.status_code, f"LLM 调用失败: {resp.text[:200]}")
+                data = resp.json()
+                break
+            except HTTPException:
+                raise
+            except Exception as e:
+                last_error = str(e)
+                if attempt < 2:
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                import traceback
+                detail = f"LLM 请求异常（重试 3 次后仍失败）: {e}"
+                try:
+                    detail += f"\nURL: {api_root}/v1/chat/completions"
+                    detail += f"\nModel: {model}"
+                except Exception:
+                    pass
+                print(f"[LLM ERROR] {detail}\n{traceback.format_exc()}")
+                raise HTTPException(502, detail)
 
-        if resp.status_code != 200:
-            raise HTTPException(resp.status_code, f"LLM 调用失败: {resp.text[:200]}")
-
-        data = resp.json()
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        detail = f"LLM 请求异常: {e}"
-        try:
-            detail += f"\nURL: {api_root}/v1/chat/completions"
-            detail += f"\nModel: {model}"
-        except Exception:
-            pass
-        print(f"[LLM ERROR] {detail}\n{traceback.format_exc()}")
-        raise HTTPException(502, detail)
+    if data is None:
+        raise HTTPException(502, f"LLM 请求失败（重试 3 次后仍无响应）: {last_error}")
 
     content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
