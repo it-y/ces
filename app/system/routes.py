@@ -692,10 +692,26 @@ async def api_update_connectivity(req: dict):
 
 
 @router.get("/update-connectivity/probe")
-async def api_probe_connectivity(url: str = ""):
+async def api_probe_connectivity(url: str = "", name: str = ""):
     import time
+    from ..config import (
+        GITHUB_VERSION_URL, GITHUB_TREE_URL,
+        MODELSCOPE_VERSION_URL, MODELSCOPE_REPO_URL,
+    )
+    # 兼容旧前端（传 name 不传 url）
     if not url:
-        raise HTTPException(400, "Missing url parameter")
+        NAME_TO_URL = {
+            "GitHub 更新列表": GITHUB_TREE_URL,
+            "GitHub 版本文件": GITHUB_VERSION_URL,
+            "GitHub 主页": "https://github.com/",
+            "ModelScope 版本文件": MODELSCOPE_VERSION_URL,
+            "ModelScope 空间页面": MODELSCOPE_REPO_URL,
+            "ModelScope 主页": "https://modelscope.cn/",
+            "Google 连通性": "https://www.google.com/generate_204",
+        }
+        url = NAME_TO_URL.get(name, "")
+    if not url:
+        raise HTTPException(400, "Missing url or unknown name parameter")
     start = time.monotonic()
     try:
         async with create_client("quick") as client:
