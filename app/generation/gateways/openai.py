@@ -7,13 +7,14 @@ OpenAI 兼容协议网关 — 支持 OpenAI/Apimart/Gemini-compatible 等。
   - HTTP/1.1 兼容（中转站常见不支持 HTTP/2）
 """
 
+import asyncio
 import base64
 import json
 import time
 from typing import Optional
 from pathlib import Path
 
-from ...core.http_client import create_client
+from ...core.http_client import create_client, retry_request
 from ...core.errors import friendly_image_error_detail
 from ...config import UPLOAD_DIR, OUTPUT_DIR, CANVAS_FILES_DIR
 
@@ -50,9 +51,8 @@ class OpenAIGateway:
     # ---- retry 请求包装 ----
 
     async def _post_with_retry(self, url: str, **kwargs) -> dict:
-        """直连优先 + 代理兜底 POST 请求，返回 JSON 响应体"""
-        from ...core.http_client import request_with_fallback
-        resp = await request_with_fallback("POST", url, timeout_preset="long", **kwargs)
+        """直连 POST + 重试，返回 JSON 响应体"""
+        resp = await retry_request("POST", url, **kwargs)
         if resp.status_code != 200:
             msg = friendly_image_error_detail(resp.text, url, "")
             raise ImageGenerationError(msg, resp.status_code)

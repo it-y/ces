@@ -39,8 +39,8 @@ class VolcengineGateway:
         body_str = json.dumps(body, ensure_ascii=False)
         headers = self._sign_headers(body_str)
 
-        from ...core.http_client import request_with_fallback
-        resp = await request_with_fallback("POST", self._endpoint(), timeout_preset="long", content=body_str, headers=headers)
+        from ...core.http_client import retry_request
+        resp = await retry_request("POST", self._endpoint(), content=body_str, headers=headers)
 
         if resp.status_code != 200:
             raise Exception(friendly_image_error_detail(resp.text, size, model))

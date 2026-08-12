@@ -15,7 +15,7 @@ import json
 import random
 import time
 import uuid
-from ...core.http_client import create_client
+from ...core.http_client import create_client, retry_request
 from ...config import (
     RUNNINGHUB_OPENAPI_BASE_URL, RUNNINGHUB_LLM_BASE_URL,
     RUNNINGHUB_DEFAULT_BASE_URL, IMAGE_TASK_TIMEOUT, IMAGE_POLL_INTERVAL,
@@ -98,8 +98,7 @@ class RunningHubGateway:
             "Content-Type": "application/json",
         } if api_key else {"Content-Type": "application/json"}
 
-        from ...core.http_client import request_with_fallback
-        resp = await request_with_fallback("POST", url, timeout_preset="long", json=body, headers=headers)
+        resp = await retry_request("POST", url, json=body, headers=headers)
 
         if resp.status_code != 200:
             raise Exception(f"RunningHub 提交失败：{resp.text[:200]}")

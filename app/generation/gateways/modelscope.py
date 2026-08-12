@@ -4,7 +4,7 @@ ModelScope 网关 — 图片生成（异步提交 + 轮询）。
 
 import asyncio
 import time
-from ...core.http_client import create_client, request_with_fallback
+from ...core.http_client import create_client, retry_request
 from ...core.errors import friendly_image_error_detail
 from ...config import IMAGE_POLL_INTERVAL, IMAGE_TASK_TIMEOUT, MODELSCOPE_CHAT_BASE_URL
 
@@ -39,8 +39,7 @@ class ModelScopeGateway:
 
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
 
-        from ...core.http_client import request_with_fallback
-        resp = await request_with_fallback("POST", url, timeout_preset="long", json=body, headers=headers)
+        resp = await retry_request("POST", url, json=body, headers=headers)
 
         if resp.status_code == 200:
             data = resp.json()

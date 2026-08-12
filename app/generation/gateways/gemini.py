@@ -3,7 +3,7 @@ Gemini 网关 — 图片生成（multipart + URL 拼接）。
 """
 
 import base64
-from ...core.http_client import create_client
+from ...core.http_client import create_client, retry_request
 from ...core.errors import friendly_image_error_detail
 
 
@@ -51,8 +51,7 @@ class GeminiGateway:
             },
         }
 
-        from ...core.http_client import request_with_fallback
-        resp = await request_with_fallback("POST", url, timeout_preset="long", json=body)
+        resp = await retry_request("POST", url, json=body)
 
         if resp.status_code != 200:
             raise Exception(friendly_image_error_detail(resp.text, size, model))

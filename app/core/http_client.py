@@ -190,6 +190,27 @@ def _is_transient_error(e: Exception) -> bool:
     return False
 
 
+async def retry_request(method: str, url: str, **kwargs):
+    """
+    直连 HTTP 请求 + 指数退避重试（不经过代理，与 LLM 路由行为一致）。
+
+    5xx 和连接异常自动重试（最多 3 次），4xx 立即返回。
+    """
+    async with create_client("long") as client:
+        for attempt in range(3):
+            try:
+                resp = await client.request(method, url, **kwargs)
+                if resp.status_code >= 500 and attempt < 2:
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                return resp
+            except Exception:
+                if attempt < 2:
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                raise
+
+
 async def close_clients():
     """关闭所有缓存客户端（应用关闭时调用）"""
     for preset, client in _direct_clients.items():
