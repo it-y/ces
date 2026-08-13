@@ -20,7 +20,7 @@ from ..config import (
     MODELSCOPE_DATASET_ID,
     current_app_version, load_github_token, load_modelscope_token,
 )
-from ..core.http_client import create_client
+from ..core.http_client import create_client, request_with_fallback
 
 _update_lock = asyncio.Lock()
 
@@ -192,48 +192,53 @@ async def _do_download(source: str) -> Path:
 
 async def _fetch_github_file_list() -> list[str]:
     headers = _github_auth_headers()
-    # GitHub（api.github.com / raw.githubusercontent.com）在国内直连常被墙，
-    # 需要走系统代理（VPN）；并跟随重定向（raw 对部分文件会返回 302）。
-    async with create_client("normal", trust_env=True, follow_redirects=True) as client:
-        tree_code = None
-        resp = await client.get(GITHUB_TREE_URL, headers=headers)
-        tree_code = resp.status_code
-        if resp.status_code == 200:
-            data = resp.json()
-            tree = data.get("tree", [])
-            return [item["path"] for item in tree if item.get("type") == "blob"]
-        resp = await client.get(GITHUB_MANIFEST_URL, headers=headers)
-        manifest_code = resp.status_code
-        if resp.status_code == 200:
-            lines = resp.text.strip().splitlines()
-            return [l.strip() for l in lines if l.strip() and not l.strip().startswith("#")]
-        raise RuntimeError(
-            f"GitHub file list unavailable: tree API={tree_code}, manifest={manifest_code}"
-        )
+    # 直连优先，失败自动走系统代理（GitHub 国内直连常被墙）；跟随重定向（raw 会返回 302）
+    tree_code = None
+    resp = await request_with_fallback(
+        "GET", GITHUB_TREE_URL, timeout_preset="normal",
+        follow_redirects=True, headers=headers,
+    )
+    tree_code = resp.status_code
+    if resp.status_code == 200:
+        data = resp.json()
+        tree = data.get("tree", [])
+        return [item["path"] for item in tree if item.get("type") == "blob"]
+    resp = await request_with_fallback(
+        "GET", GITHUB_MANIFEST_URL, timeout_preset="normal",
+        follow_redirects=True, headers=headers,
+    )
+    manifest_code = resp.status_code
+    if resp.status_code == 200:
+        lines = resp.text.strip().splitlines()
+        return [l.strip() for l in lines if l.strip() and not l.strip().startswith("#")]
+    raise RuntimeError(
+        f"GitHub file list unavailable: tree API={tree_code}, manifest={manifest_code}"
+    )
 
 
 async def _fetch_modelscope_file_list() -> list[str]:
     headers = _modelscope_auth_headers()
-    async with create_client("normal", follow_redirects=True) as client:
-        all_files = []
-        page = 1
-        while True:
-            url = f"{MODELSCOPE_TREE_URL}&PageNumber={page}&PageSize=100"
-            resp = await client.get(url, headers=headers)
-            if resp.status_code != 200:
-                raise RuntimeError(f"ModelScope tree returned {resp.status_code}")
-            data = resp.json()
-            files = data.get("Data", {}).get("Files", [])
-            if not files:
-                break
-            for item in files:
-                if isinstance(item, dict) and item.get("Type") == "blob" and item.get("Path"):
-                    all_files.append(item["Path"])
-            total = data.get("Data", {}).get("TotalCount") or data.get("TotalCount", 0)
-            if len(all_files) >= total:
-                break
-            page += 1
-        return all_files
+    all_files = []
+    page = 1
+    while True:
+        url = f"{MODELSCOPE_TREE_URL}&PageNumber={page}&PageSize=100"
+        resp = await request_with_fallback(
+            "GET", url, timeout_preset="normal", follow_redirects=True, headers=headers,
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(f"ModelScope tree returned {resp.status_code}")
+        data = resp.json()
+        files = data.get("Data", {}).get("Files", [])
+        if not files:
+            break
+        for item in files:
+            if isinstance(item, dict) and item.get("Type") == "blob" and item.get("Path"):
+                all_files.append(item["Path"])
+        total = data.get("Data", {}).get("TotalCount") or data.get("TotalCount", 0)
+        if len(all_files) >= total:
+            break
+        page += 1
+    return all_files
 
 
 async def _download_files(source: str, files: list[str], staging: Path):
@@ -243,24 +248,23 @@ async def _download_files(source: str, files: list[str], staging: Path):
     # 并发上限：一次性并发全部文件会把 httpx 连接池打满，
     # 上游响应慢时排队请求命中 pool=20s 的 PoolTimeout，导致整个更新中止。
     # 限流后连接池始终有富余，逐个波次下载。
-    CONCURRENCY = 30
+    CONCURRENCY = 40
     semaphore = asyncio.Semaphore(CONCURRENCY)
     failures: list[str] = []
 
     async def download_one(path: str):
         url = f"{GITHUB_RAW_ROOT}/{path}" if source == "github" else f"{MODELSCOPE_FILE_API_ROOT}{path}"
         headers = gh_headers if source == "github" else ms_headers
-        # GitHub 走系统代理（国内直连 raw 常被墙）+ 跟随重定向；魔塔直连即可
-        client_kwargs = {"follow_redirects": True}
-        if source == "github":
-            client_kwargs["trust_env"] = True
+        # request_with_fallback：直连优先，失败自动走系统代理（VPN），并跟随重定向
         last_err = ""
         # 单文件重试：瞬时错误（限流 429 / 5xx / 连接异常）重试最多 3 次
         for attempt in range(3):
             try:
                 async with semaphore:
-                    async with create_client("normal", **client_kwargs) as client:
-                        resp = await client.get(url, headers=headers)
+                    resp = await request_with_fallback(
+                        "GET", url, timeout_preset="normal",
+                        follow_redirects=True, headers=headers,
+                    )
                 if resp.status_code != 200:
                     if resp.status_code in (429, 500, 502, 503, 504) and attempt < 2:
                         last_err = f"HTTP {resp.status_code}"
