@@ -95,18 +95,34 @@ async def _run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
             CANVAS_TASKS[task_id]["status"] = "running"
             CANVAS_TASKS[task_id]["updated_at"] = time.time()
             _save_tasks()
+    from ..config import CANVAS_IMAGE_TASK_TIMEOUT
     try:
-        result = await generate_image(
-            prompt=payload.prompt, size=payload.size, model=payload.model,
-            quality=payload.quality, n=payload.n, provider_id=payload.provider_id,
-            reference_images=[ref.model_dump() for ref in payload.reference_images] if payload.reference_images else None,
-            canvas_id=payload.canvas_id, client_id=payload.client_id,
+        # 任务级看门狗：上游接口挂起（不返回响应）时，超时后标记失败，
+        # 否则前端会无限等待、计时器一直累加
+        result = await asyncio.wait_for(
+            generate_image(
+                prompt=payload.prompt, size=payload.size, model=payload.model,
+                quality=payload.quality, n=payload.n, provider_id=payload.provider_id,
+                reference_images=[ref.model_dump() for ref in payload.reference_images] if payload.reference_images else None,
+                canvas_id=payload.canvas_id, client_id=payload.client_id,
+            ),
+            timeout=CANVAS_IMAGE_TASK_TIMEOUT,
         )
         async with _task_lock:
             CANVAS_TASKS[task_id].update({
                 "status": "succeeded",
                 "result": result,
                 "error": "",
+                "updated_at": time.time(),
+            })
+            _save_tasks()
+    except asyncio.TimeoutError:
+        detail = f"图片生成超时（{int(CANVAS_IMAGE_TASK_TIMEOUT)} 秒内未完成）。可能是上游接口无响应，请重试；若持续失败请更换模型或供应商。"
+        log.warning("canvas image task %s timed out", task_id)
+        async with _task_lock:
+            CANVAS_TASKS[task_id].update({
+                "status": "failed",
+                "error": detail,
                 "updated_at": time.time(),
             })
             _save_tasks()

@@ -142,7 +142,9 @@ from ..config import DATA_DIR
 
 **更新范围**：
 - `VERSION` 文件
-- `static/*.html` 和 `upload/static/*.html` 中所有 `?v=YYYY.MM.DD.N` 引用
+- `static/*.html` 中所有 `?v=YYYY.MM.DD.N` 引用
+
+> `upload/` 目录已废弃（Electron 桌面打包目录，已脱节不维护），**不要**再同步它的版本号或代码。
 
 **每次 push 代码前，必须先改版本号。不推送不带版本号的代码。**
 

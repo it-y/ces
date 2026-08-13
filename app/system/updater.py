@@ -238,18 +238,51 @@ async def _download_files(source: str, files: list[str], staging: Path):
     gh_headers = _github_auth_headers() if source == "github" else {}
     ms_headers = _modelscope_auth_headers() if source == "modelscope" else {}
 
+    # 并发上限：一次性并发全部文件会把 httpx 连接池打满，
+    # 上游响应慢时排队请求命中 pool=20s 的 PoolTimeout，导致整个更新中止。
+    # 限流后连接池始终有富余，逐个波次下载。
+    CONCURRENCY = 30
+    semaphore = asyncio.Semaphore(CONCURRENCY)
+    failures: list[str] = []
+
     async def download_one(path: str):
         url = f"{GITHUB_RAW_ROOT}/{path}" if source == "github" else f"{MODELSCOPE_FILE_API_ROOT}{path}"
         headers = gh_headers if source == "github" else ms_headers
-        async with create_client("normal") as client:
-            resp = await client.get(url, headers=headers)
-            if resp.status_code != 200:
-                raise RuntimeError(f"Download failed ({resp.status_code}): {path}")
-            dest = staging / path
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            dest.write_bytes(resp.content)
+        last_err = ""
+        # 单文件重试：瞬时错误（限流 429 / 5xx / 连接异常）重试最多 3 次
+        for attempt in range(3):
+            try:
+                async with semaphore:
+                    async with create_client("normal") as client:
+                        resp = await client.get(url, headers=headers)
+                if resp.status_code != 200:
+                    if resp.status_code in (429, 500, 502, 503, 504) and attempt < 2:
+                        last_err = f"HTTP {resp.status_code}"
+                        await asyncio.sleep(1 + attempt)
+                        continue
+                    failures.append(f"{path}: HTTP {resp.status_code}")
+                    return
+                dest = staging / path
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_bytes(resp.content)
+                return
+            except Exception as exc:
+                last_err = str(exc)
+                if attempt < 2:
+                    await asyncio.sleep(1 + attempt)
+                    continue
+        failures.append(f"{path}: {last_err or 'unknown'}")
 
     await asyncio.gather(*[download_one(f) for f in files])
+
+    if failures:
+        # 关键文件缺失才判定失败；少量文件失败且不影响关键文件时容忍
+        missing_required = [r for r in STAGING_REQUIRED_FILES if not (staging / r).exists()]
+        if missing_required or len(failures) > max(3, len(files) * 0.05):
+            raise RuntimeError(
+                f"部分文件下载失败 ({len(failures)}/{len(files)})："
+                + "; ".join(failures[:5])
+            )
 
 
 def _validate_staging_has_required(staging: Path):

@@ -195,12 +195,14 @@ class OpenAIGateway:
 
         # 标准 OpenAI 协议
         quality = self._normalize_quality(quality)
+        # GPT-Image-2 不带 n（对齐原版行为：部分中转站带 n 会拒绝/挂起）
         body = {
             "prompt": prompt,
             "model": model,
-            "n": n,
             "size": size,
         }
+        if not self._is_gpt_image_2(model):
+            body["n"] = n
         if quality:
             body["quality"] = quality
         if self.image_request_mode == "openai-json":
