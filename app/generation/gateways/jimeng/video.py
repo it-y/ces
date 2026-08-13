@@ -9,7 +9,8 @@
   text2video         — 无任何 ref（默认）
 """
 
-from .process import jimeng_subprocess
+from .process import jimeng_subprocess, JimengPendingError
+from ..openai import ImageGenerationError
 
 
 class JimengVideoGateway:
@@ -40,9 +41,15 @@ class JimengVideoGateway:
                 if url:
                     args += ["--image", url]
 
-        result = await jimeng_subprocess.run(args)
-        if result is None:
-            raise Exception(f"即梦视频生成失败（模式: {mode}），请检查 CLI 是否已安装和登录")
+        try:
+            result = await jimeng_subprocess.run(args)
+        except JimengPendingError as e:
+            raise ImageGenerationError(
+                str(e) or f"即梦视频任务（模式: {mode}）在云端排队中，请稍后查询",
+                202,
+            )
+        except RuntimeError as e:
+            raise ImageGenerationError(str(e), 502)
 
         return self._extract_urls(result)
 

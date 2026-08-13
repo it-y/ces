@@ -7,8 +7,10 @@
 
 import asyncio
 import os
+import re
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlsplit
 
 from ..config import (
     API_PROVIDERS_PATH, CONFIG_DIR, API_ENV_FILE,
@@ -37,7 +39,7 @@ def _default_providers() -> list[dict]:
             "base_url": COMFLY_BASE_URL,
             "image_request_mode": "openai",
             "enabled": True,
-            "primary": True,
+            "primary": False,
             "image_models": ["gpt-image-2", "gemini-3.1-flash-image-preview-2k", "nano-banana-pro"],
             "chat_models": ["gpt-4o-mini", "gemini-3.1-flash-image-preview-2k", "gpt-4.1"],
             "video_models": ["veo2", "veo2-fast", "veo3", "veo3-fast"],
@@ -174,7 +176,8 @@ def effective_protocol(provider: dict, model: str = "") -> str:
 
 
 def is_apimart_provider(provider: dict) -> bool:
-    return provider_protocol(provider) == "apimart"
+    base_url = str((provider or {}).get("base_url") or "").lower()
+    return provider_protocol(provider) == "apimart" or "apimart.ai" in base_url
 
 
 def is_gemini_provider(provider: dict) -> bool:
@@ -195,6 +198,92 @@ def is_jimeng_provider(provider: dict) -> bool:
 
 def is_modelscope_provider(provider: dict) -> bool:
     return provider.get("id") == "modelscope" or provider_protocol(provider) == "modelscope"
+
+
+def is_yuli_provider(provider: dict) -> bool:
+    return "yuli.host" in str((provider or {}).get("base_url") or "").lower()
+
+
+def is_openrouter_provider(provider: dict) -> bool:
+    url = str((provider or {}).get("base_url") or "").lower()
+    return provider_protocol(provider) == "openrouter" or "openrouter.ai" in url
+
+
+def effective_image_request_mode(provider: dict, model: str = "") -> str:
+    """
+    检测 provider 的图片请求模式（是否需要用 openai-json 包装）。
+
+    检测顺序：
+      1. provider 配置显式指定的 image_request_mode
+      2. base_url 特征检测（agneshub 等平台）
+    """
+    explicit = provider.get("image_request_mode", "")
+    if explicit:
+        return explicit
+
+    base_url = str(provider.get("base_url", "")).lower()
+    # agnes-ai / agneshub 平台需要 openai-json 模式
+    if "agneshub" in base_url or "agnes-ai" in base_url:
+        return "openai-json"
+    # 其他显式 openai-json 标记
+    if "openai-json" in base_url:
+        return "openai-json"
+    return "openai"
+
+
+def is_agnes_provider(provider: dict) -> bool:
+    """检测是否为 agnes-ai 供应商"""
+    base_url = str((provider or {}).get("base_url", "")).lower()
+    return "agneshub" in base_url or "agnes-ai" in base_url
+
+
+def chat_api_url(provider: dict) -> str:
+    """
+    根据 provider 协议返回正确的聊天补全 URL。
+
+    不同协议的路径后缀不同：
+      - gemini:    /v1beta/chat/completions（base 不含 /v1beta）
+      - volcengine: /api/v3/chat/completions（base 不含 /api/v3）
+      - runninghub: 直接用 base 拼 /chat/completions
+      - modelscope: base 通常已有 /v1，直接拼 /chat/completions
+      - openai:    base 通常不含 /v1，拼 /v1/chat/completions
+    """
+    proto = provider_protocol(provider)
+    base = (provider.get("base_url", "") or "").rstrip("/")
+
+    if proto == "gemini":
+        return f"{base}/v1beta/chat/completions" if base else ""
+    if proto == "volcengine":
+        # volcengine base 一般已包含 /api/v3
+        if "/api/v3" in base:
+            return f"{base}/chat/completions"
+        return f"{base}/api/v3/chat/completions" if base else ""
+    if proto == "runninghub":
+        if base:
+            return f"{base}/chat/completions"
+        from ..config import RUNNINGHUB_LLM_BASE_URL
+        return f"{RUNNINGHUB_LLM_BASE_URL.rstrip('/')}/chat/completions"
+    if proto == "modelscope":
+        # modelscope base_url 已含 /v1
+        return f"{base}/chat/completions" if base else ""
+    # openai / apimart / 其他：base 一般不含 /v1
+    if "/v1" in base:
+        return f"{base}/chat/completions"
+    return f"{base}/v1/chat/completions" if base else ""
+
+
+def preferred_chat_model(provider: dict, requested: str = "") -> str:
+    """
+    选择首选聊天模型。volcengine ep-* 推理端点型号有不同的模型选择逻辑。
+    """
+    chat_models = provider.get("chat_models") or []
+    if not chat_models:
+        return requested or "gpt-4o-mini"
+    # ep-* 端点（volcengine 推理点）总是用第一个可用模型
+    base = (provider.get("base_url", "") or "")
+    if "ep-" in base and chat_models:
+        return chat_models[0]
+    return requested or chat_models[0]
 
 
 # ============================================================
@@ -293,3 +382,59 @@ def public_provider(provider: dict) -> dict:
     pub["wallet_key_preview"] = mask_secret(wallet_key) if wallet_key else ""
     pub["wallet_key_env"] = runninghub_wallet_key_env()
     return pub
+
+
+# ============================================================
+# 端点 URL 覆盖
+# ============================================================
+
+def provider_endpoint_url(provider: dict, key: str, default_path: str) -> str:
+    """
+    获取供应商端点 URL，支持 provider 级别的路径覆盖。
+    例如 provider 设置了 image_generation_endpoint → 优先使用该端点。
+    """
+    base_url = str((provider or {}).get("base_url") or "").strip().rstrip("/")
+    override = str((provider or {}).get(key) or "").strip()
+    if override:
+        if re.match(r"^https?://", override, re.I):
+            return override.rstrip("/")
+        parsed = urlsplit(base_url)
+        if parsed.scheme and parsed.netloc:
+            return f"{parsed.scheme}://{parsed.netloc}{override}"
+        return override
+    # 智能路径拼接：避免 /v1/v1/… 重复
+    for prefix in ("/api/v3", "/v1beta", "/v1", "/v2"):
+        if base_url.endswith(prefix) and default_path.startswith(f"{prefix}/"):
+            return f"{base_url}{default_path[len(prefix):]}"
+    return f"{base_url}{default_path}"
+
+
+# ============================================================
+# 声明式 Provider 匹配器注册表
+# ============================================================
+
+# 每种 provider 类型用一个 (matcher_fn, protocol_name) 条目定义。
+# 优先顺序决定匹配时的优先级（先匹配到的先返回）。
+PROVIDER_MATCHERS: list[tuple[str, callable]] = [
+    ("modelscope", is_modelscope_provider),
+    ("jimeng", is_jimeng_provider),
+    ("runninghub", is_runninghub_provider),
+    ("volcengine", is_volcengine_provider),
+    ("gemini", is_gemini_provider),
+    ("apimart", is_apimart_provider),
+    ("yuli", is_yuli_provider),
+    ("openrouter", is_openrouter_provider),
+]
+
+
+def detect_provider_types(provider: dict) -> list[str]:
+    """返回 provider 匹配到的所有类型标签（按优先级排序）。"""
+    return [label for label, fn in PROVIDER_MATCHERS if fn(provider)]
+
+
+def primary_provider_type(provider: dict) -> str:
+    """返回最高优先级的 provider 类型标签，未匹配返回 'openai'。"""
+    for label, fn in PROVIDER_MATCHERS:
+        if fn(provider):
+            return label
+    return "openai"

@@ -11,14 +11,15 @@ RunningHub 是项目最复杂的网关：
 """
 
 import asyncio
+import base64
 import json
 import random
 import time
 import uuid
 from ...core.http_client import create_client, retry_request
+from .openai import ImageGenerationError
 from ...config import (
-    RUNNINGHUB_OPENAPI_BASE_URL, RUNNINGHUB_LLM_BASE_URL,
-    RUNNINGHUB_DEFAULT_BASE_URL, IMAGE_TASK_TIMEOUT, IMAGE_POLL_INTERVAL,
+    RUNNINGHUB_OPENAPI_BASE_URL, IMAGE_TASK_TIMEOUT, IMAGE_POLL_INTERVAL,
 )
 
 
@@ -40,10 +41,13 @@ class RunningHubGateway:
         if not entry:
             raise ValueError(f"RunningHub 模型格式错误：{model}，请使用 app:ID 或 workflow:ID")
 
+        # 上传参考图（本地路径/data URL → RunningHub 内部 fileName）
+        uploaded_refs = await self._upload_references(reference_images or [])
+
         if entry["kind"] == "app":
-            return await self._run_app(entry, prompt, reference_images)
+            return await self._run_app(entry, prompt, uploaded_refs)
         else:
-            return await self._run_workflow(entry, prompt, reference_images)
+            return await self._run_workflow(entry, prompt, uploaded_refs)
 
     # ---- 模型解析 ----
 
@@ -65,6 +69,95 @@ class RunningHubGateway:
             if model in (wf.get("workflowId"), wf.get("title")):
                 return {"kind": "workflow", "id": wf["workflowId"], "config": wf}
         return None
+
+    # ---- 参考图上传 ----
+
+    async def _upload_references(self, refs: list) -> list[dict]:
+        """
+        上传参考图到 RunningHub。本地路径/data URL 需要先上传得到 fileName，
+        远程 URL 直接传递。
+        返回格式与输入一致: [{"url": "fileName_or_url", ...}, ...]
+        """
+        if not refs:
+            return []
+        uploaded = []
+        for ref in refs:
+            url = ref.get("url", "") if isinstance(ref, dict) else str(ref)
+            if not url:
+                uploaded.append(ref)
+                continue
+
+            # 远程 URL 直接传递
+            if url.startswith("http://") or url.startswith("https://"):
+                uploaded.append(ref)
+                continue
+
+            # 本地路径 / data URL → 上传
+            try:
+                img_bytes = await self._fetch_ref_bytes(url)
+                if not img_bytes:
+                    uploaded.append(ref)
+                    continue
+
+                b64 = base64.b64encode(img_bytes).decode("ascii")
+                mime = ref.get("mime", "image/png") if isinstance(ref, dict) else "image/png"
+                ext = mime.split("/")[-1] if "/" in mime else "png"
+
+                upload_url = f"{RUNNINGHUB_OPENAPI_BASE_URL}/workflow/upload"
+                upload_body = {
+                    "imageBase64": f"data:{mime};base64,{b64}",
+                    "fileName": f"ref_{uuid.uuid4().hex[:8]}.{ext}",
+                }
+                headers = {"Content-Type": "application/json"}
+                if self._api_key():
+                    headers["Authorization"] = f"Bearer {self._api_key()}"
+
+                resp = await retry_request("POST", upload_url, json=upload_body, headers=headers)
+                if resp.status_code == 200:
+                    result = resp.json()
+                    # RH 上传返回 fileName 或 url
+                    filename = (
+                        result.get("data", {}).get("fileName")
+                        or result.get("fileName")
+                        or result.get("data", {}).get("url")
+                    )
+                    if filename:
+                        uploaded.append({"url": filename, **{k: v for k, v in (ref if isinstance(ref, dict) else {}).items() if k != "url"}})
+                        continue
+            except Exception:
+                pass
+            uploaded.append(ref)
+        return uploaded
+
+    @staticmethod
+    async def _fetch_ref_bytes(url: str) -> bytes | None:
+        """获取参考图字节（支持 data URL、本地路径、远程 URL）"""
+        if not url:
+            return None
+        if url.startswith("data:"):
+            try:
+                _, encoded = url.split(",", 1)
+                return base64.b64decode(encoded)
+            except Exception:
+                return None
+        if url.startswith("/"):
+            from pathlib import Path
+            from ...config import UPLOAD_DIR, OUTPUT_DIR, CANVAS_FILES_DIR
+            path_part = url.split("?")[0]
+            for root in (CANVAS_FILES_DIR, UPLOAD_DIR, OUTPUT_DIR):
+                local = Path(root) / path_part.lstrip("/").split("/", 1)[-1] if "/" in path_part.lstrip("/") else Path(root) / path_part.lstrip("/")
+                try:
+                    if local.exists():
+                        return local.read_bytes()
+                except Exception:
+                    continue
+            return None
+        try:
+            async with create_client("normal") as client:
+                resp = await client.get(url)
+                return resp.content if resp.status_code == 200 else None
+        except Exception:
+            return None
 
     # ---- App 模式 ----
 
@@ -101,13 +194,13 @@ class RunningHubGateway:
         resp = await retry_request("POST", url, json=body, headers=headers)
 
         if resp.status_code != 200:
-            raise Exception(f"RunningHub 提交失败：{resp.text[:200]}")
+            raise ImageGenerationError(f"RunningHub 提交失败：{resp.text[:200]}", resp.status_code)
 
         data = resp.json()
         task_id = data.get("data", {}).get("taskId") or data.get("taskId", "")
 
         if not task_id:
-            raise Exception(f"RunningHub 未返回 taskId")
+            raise ImageGenerationError(f"RunningHub 未返回 taskId", 502)
 
         # 轮询
         poll_url = f"{RUNNINGHUB_OPENAPI_BASE_URL}/task/query"
@@ -124,52 +217,87 @@ class RunningHubGateway:
             if status in ("done", "succeeded", "success", "completed"):
                 return self._extract_outputs(poll_data)
             if status in ("failed", "error", "cancelled"):
-                raise Exception(poll_data.get("data", {}).get("failReason", "RunningHub 生成失败"))
+                raise ImageGenerationError(poll_data.get("data", {}).get("failReason", "RunningHub 生成失败"), 502)
             await asyncio.sleep(IMAGE_POLL_INTERVAL)
 
-        raise Exception("RunningHub 任务超时")
+        raise ImageGenerationError("RunningHub 任务超时", 504)
 
     # ---- 节点参数构造 ----
 
     def _build_node_info(self, prompt: str, config: dict | None, refs: list | None) -> list:
-        """根据 workflow/app 的字段定义构造 nodeInfoList"""
+        """根据 workflow/app 的字段定义构造 nodeInfoList，自动填充 schema 默认值"""
         fields = (config or {}).get("fields", [])
+        if not fields:
+            return [{"prompt": prompt}]
+
         nodes = []
+        ref_idx = 0
         for field in fields:
-            value = self._field_default(field)
-            # 自动填充 prompt 字段
+            field_name = field.get("fieldName", "unknown")
+            kind = (field.get("kind", "") + field.get("type", "")).upper()
+
+            # 自动填充 prompt
             if self._is_prompt_field(field):
                 value = prompt
-            # 自动填充 seed 字段
-            if self._is_seed_field(field):
+            # 自动填充 seed
+            elif self._is_seed_field(field):
                 value = random.randint(0, 4294967295)
             # 自动填充参考图
-            if self._is_image_field(field) and refs:
-                value = refs[0].get("url", "") if refs else ""
-            nodes.append({field.get("fieldName", "unknown"): value})
-        return nodes
+            elif kind in ("IMAGE", "PICTURE", "UPLOADIMAGE"):
+                if refs and ref_idx < len(refs):
+                    value = refs[ref_idx].get("url", "") if isinstance(refs[ref_idx], dict) else str(refs[ref_idx])
+                    ref_idx += 1
+                else:
+                    value = field.get("default", "")
+            # 自动填充视频参考
+            elif kind in ("VIDEO", "UPLOADVIDEO"):
+                value = field.get("default", "")
+            # 自动填充音频参考
+            elif kind in ("AUDIO", "UPLOADAUDIO"):
+                value = field.get("default", "")
+            # 按 kind 应用默认值
+            elif kind == "NUMBER":
+                value = field.get("default", 0)
+                if value is None:
+                    value = 0
+            elif kind == "SLIDER":
+                value = field.get("default", field.get("min", 0))
+                if value is None:
+                    value = field.get("min", 0)
+            elif kind == "BOOLEAN":
+                default = field.get("default", False)
+                if isinstance(default, str):
+                    default = default.lower() in ("true", "1", "yes")
+                value = default
+            elif kind == "CHECKBOX":
+                default = field.get("default", False)
+                if isinstance(default, str):
+                    default = default.lower() in ("true", "1", "yes")
+                value = default
+            elif kind == "TEXT":
+                value = field.get("default", "")
+                if value is None:
+                    value = ""
+            else:
+                value = field.get("default", "")
 
-    def _field_default(self, field: dict) -> any:
-        kind = field.get("kind", "").upper()
-        if kind == "NUMBER":
-            return field.get("default", 0)
-        if kind == "SLIDER":
-            return field.get("default", field.get("min", 0))
-        if kind == "BOOLEAN":
-            return field.get("default", False)
-        return field.get("default", "")
+            nodes.append({field_name: value})
+
+        return nodes
 
     def _is_prompt_field(self, field: dict) -> bool:
         name = (field.get("fieldName", "") + field.get("label", "")).lower()
-        return "prompt" in name or "text" in name
+        # 精确匹配 prompt/text，避免误匹配 texture/context
+        if name in ("prompt", "text", "positive_prompt"):
+            return True
+        return name.startswith("prompt") or name.endswith("_prompt")
 
     def _is_seed_field(self, field: dict) -> bool:
         name = (field.get("fieldName", "") + field.get("label", "")).lower()
-        return "seed" in name or "noise" in name
-
-    def _is_image_field(self, field: dict) -> bool:
-        kind = (field.get("kind", "") + field.get("type", "")).upper()
-        return kind in ("IMAGE", "PICTURE", "UPLOADIMAGE")
+        # 精确匹配 seed，避免误匹配 denoise
+        if name in ("seed", "noise_seed", "random_seed"):
+            return True
+        return name.startswith("seed_") or name.endswith("_seed")
 
     # ---- 输出提取 ----
 
@@ -193,7 +321,8 @@ class RunningHubGateway:
         if isinstance(data, dict):
             for v in data.values():
                 if isinstance(v, str) and v.startswith("http") and any(
-                    ext in v.lower() for ext in (".png", ".jpg", ".mp4", ".webp", ".gif")
+                    ext in v.lower() for ext in (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tiff",
+                                                 ".mp4", ".webm", ".mov", ".avi", ".mkv")
                 ):
                     urls.append(v)
                 urls.extend(self._deep_find_urls(v, depth + 1))

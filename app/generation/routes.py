@@ -219,6 +219,8 @@ async def api_canvas_video(req: CanvasVideoRequest):
         return result
     except ValueError as e:
         raise HTTPException(400, str(e))
+    except ImageGenerationError as e:
+        raise HTTPException(e.status_code, str(e))
     except NotImplementedError as e:
         raise HTTPException(501, str(e))
 
@@ -226,7 +228,7 @@ async def api_canvas_video(req: CanvasVideoRequest):
 @router.post("/canvas-llm")
 async def api_canvas_llm(req: CanvasLLMRequest):
     """Canvas LLM — 画布上的 LLM 节点"""
-    from ..system.providers import get_provider, effective_protocol
+    from ..system.providers import get_provider, effective_protocol, chat_api_url, preferred_chat_model
     from ..core.http_client import create_client
     from ..config import MODELSCOPE_CHAT_BASE_URL, OUTPUT_DIR, UPLOAD_DIR
 
@@ -239,7 +241,7 @@ async def api_canvas_llm(req: CanvasLLMRequest):
         raise HTTPException(400, f"供应商 {req.provider} 不存在，请在 API 设置中配置")
 
     chat_models = provider.get("chat_models") or []
-    model = req.model or (chat_models[0] if chat_models else "gpt-4o-mini")
+    model = preferred_chat_model(provider, req.model) or (chat_models[0] if chat_models else "gpt-4o-mini")
     messages = req.messages or [{"role": "user", "content": req.message}]
 
     # 将相对路径图片转为 base64（外部 LLM 访问不了 localhost）
@@ -298,17 +300,15 @@ async def api_canvas_llm(req: CanvasLLMRequest):
         messages = [{"role": "user", "content": content_parts}]
 
     # ModelScope 特殊路由
-    if provider.get("id") == "modelscope":
-        api_root = provider.get("base_url", MODELSCOPE_CHAT_BASE_URL).rstrip("/")
-        if req.ms_model:
-            model = req.ms_model
-    else:
-        api_root = provider.get("base_url", "").rstrip("/")
+    if provider.get("id") == "modelscope" and req.ms_model:
+        model = req.ms_model
 
     api_key = provider.get("api_key", "")
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
 
-    if not api_root:
+    # 使用协议感知的 URL 构建
+    chat_url = chat_api_url(provider)
+    if not chat_url:
         raise HTTPException(400, "LLM 供应商未配置 base_url，请在 API 设置中填写")
 
     last_error = None
@@ -317,7 +317,7 @@ async def api_canvas_llm(req: CanvasLLMRequest):
         for attempt in range(3):
             try:
                 resp = await client.post(
-                    f"{api_root}/v1/chat/completions",
+                    chat_url,
                     json={"model": model, "messages": messages},
                     headers=headers,
                 )
@@ -341,7 +341,7 @@ async def api_canvas_llm(req: CanvasLLMRequest):
                 import traceback
                 detail = f"LLM 请求异常（重试 3 次后仍失败）: {e}"
                 try:
-                    detail += f"\nURL: {api_root}/v1/chat/completions"
+                    detail += f"\nURL: {chat_url}"
                     detail += f"\nModel: {model}"
                 except Exception:
                     pass
@@ -374,7 +374,188 @@ async def api_canvas_llm(req: CanvasLLMRequest):
     return {"content": content, "model": model}
 
 
-@router.post("/canvas-comfy-tasks")
+# ---- SSE 流式 LLM 端点 ----
+
+def _sse_event(data: dict) -> str:
+    """构造 SSE 事件字符串。"""
+    import json as _json
+    return f"data: {_json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+@router.post("/canvas-llm-stream")
+async def api_canvas_llm_stream(req: CanvasLLMRequest):
+    """
+    Canvas LLM 流式端点 — 返回 text/event-stream。
+    SSE 事件类型：meta / delta / done / error
+    """
+    from fastapi.responses import StreamingResponse
+    from ..system.providers import get_provider, is_apimart_provider, chat_api_url, preferred_chat_model
+    from ..core.http_client import create_client
+    from ..config import MODELSCOPE_CHAT_BASE_URL, OUTPUT_DIR, UPLOAD_DIR
+
+    from ..canvas.context import resolve_canvas_id
+    req.canvas_id = resolve_canvas_id(req.canvas_id, None)
+
+    if not req.provider:
+        raise HTTPException(400, "请选择 LLM 供应商")
+    provider = await get_provider(req.provider)
+    if not provider:
+        raise HTTPException(400, f"供应商 {req.provider} 不存在，请在 API 设置中配置")
+
+    chat_models = provider.get("chat_models") or []
+    model = preferred_chat_model(provider, req.model) or (chat_models[0] if chat_models else "gpt-4o-mini")
+    messages = req.messages or [{"role": "user", "content": req.message}]
+
+    # Apimart 聊天不支持 stream
+    if is_apimart_provider(provider):
+        # 降级为非流式并复用现有端点
+        result = await api_canvas_llm(req)
+        return result
+
+    # ModelScope 特殊路由
+    if provider.get("id") == "modelscope" and req.ms_model:
+        model = req.ms_model
+
+    api_key = provider.get("api_key", "")
+    headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+    chat_url = chat_api_url(provider)
+    if not chat_url:
+        raise HTTPException(400, "LLM 供应商未配置 base_url，请在 API 设置中填写")
+
+    # 将本地图片转为 base64
+    resolved_messages = await _resolve_images_for_llm(messages, req)
+
+    async def stream():
+        content_parts = []
+        yield _sse_event({"type": "meta", "model": model, "provider": req.provider})
+        try:
+            async with create_client("long") as client:
+                payload = {"model": model, "messages": resolved_messages, "stream": True}
+                async with client.stream("POST", chat_url, headers=headers, json=payload) as response:
+                    if response.status_code >= 400:
+                        body = await response.aread()
+                        text = body.decode("utf-8", errors="ignore")
+                        from ..core.errors import friendly_chat_error_detail
+                        friendly = friendly_chat_error_detail(text, model, req.provider)
+                        yield _sse_event({"type": "error", "detail": friendly or f"上游接口错误：{text[:300]}"})
+                        return
+                    async for line in response.aiter_lines():
+                        if not line:
+                            continue
+                        if line.startswith("data:"):
+                            line = line[5:].strip()
+                        if line == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(line)
+                        except json.JSONDecodeError:
+                            continue
+                        delta = chunk.get("choices", [{}])[0].get("delta", {})
+                        text_delta = delta.get("content", "")
+                        if text_delta:
+                            content_parts.append(text_delta)
+                            yield _sse_event({"type": "delta", "delta": text_delta})
+        except Exception as exc:
+            yield _sse_event({"type": "error", "detail": f"请求上游接口失败：{exc}"})
+            return
+
+        full_text = "".join(content_parts).strip()
+        if not full_text:
+            full_text = "接口返回了空回复。"
+
+        # 添加画布文本节点
+        if req.canvas_id and full_text:
+            try:
+                from ..canvas.manager import load_canvas, save_canvas
+                canvas = await load_canvas(req.canvas_id)
+                nodes = canvas.get("nodes", [])
+                nodes.append({
+                    "id": f"node_{uuid.uuid4().hex[:8]}",
+                    "type": "text",
+                    "x": 200, "y": 200,
+                    "width": 400, "height": 200,
+                    "data": {"text": full_text, "model": model},
+                })
+                await save_canvas(req.canvas_id, nodes=nodes)
+            except Exception:
+                pass
+
+        yield _sse_event({"type": "done", "content": full_text, "model": model})
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+async def _resolve_images_for_llm(messages: list, req) -> list:
+    """将消息中的本地图片路径转为 base64 data URL。"""
+    import base64 as _b64
+    from io import BytesIO
+    from ..config import OUTPUT_DIR, UPLOAD_DIR, CANVAS_FILES_DIR
+
+    resolved = []
+    for msg in messages:
+        if isinstance(msg.get("content"), list):
+            parts = []
+            for part in msg["content"]:
+                if part.get("type") == "image_url":
+                    url = part.get("image_url", {}).get("url", "")
+                    resolved_url = url
+                    if url and not url.startswith(("data:", "http://", "https://")):
+                        resolved_url = await _local_image_to_data(url, UPLOAD_DIR, OUTPUT_DIR, CANVAS_FILES_DIR)
+                    parts.append({"type": "image_url", "image_url": {"url": resolved_url}})
+                else:
+                    parts.append(part)
+            resolved.append({"role": msg.get("role", "user"), "content": parts})
+        else:
+            resolved.append(msg)
+    return resolved
+
+
+async def _local_image_to_data(url: str, upload_dir, output_dir, canvas_files_dir) -> str:
+    """将本地路径转为 base64 data URL。"""
+    import base64 as _b64, urllib.parse
+    from io import BytesIO
+    from pathlib import Path as _Path
+
+    clean = urllib.parse.unquote(url.split("?", 1)[0]).replace("\\", "/")
+    if clean.startswith("/cfiles/"):
+        root, rel = canvas_files_dir, clean[len("/cfiles/"):]
+    elif clean.startswith("/assets/"):
+        root, rel = upload_dir, clean[len("/assets/"):]
+    elif clean.startswith("/output/"):
+        root, rel = output_dir, clean[len("/output/"):]
+    else:
+        return url
+    rel = rel.lstrip("/")
+    if not rel:
+        return url
+    path = _Path(root) / rel
+    try:
+        path.relative_to(_Path(root).resolve())
+    except ValueError:
+        return url
+    if not path.is_file():
+        return url
+
+    raw = path.read_bytes()
+    try:
+        from PIL import Image
+        img = Image.open(BytesIO(raw))
+        img.load()
+        w, h = img.size
+        max_size = 1024
+        if max(w, h) > max_size:
+            img.thumbnail((max_size, max_size), Image.LANCZOS)
+        has_alpha = img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
+        fmt = "PNG" if has_alpha else "JPEG"
+        mime = "image/png" if fmt == "PNG" else "image/jpeg"
+        if img.mode not in ("RGB", "RGBA"):
+            img = img.convert("RGBA" if has_alpha else "RGB")
+        buf = BytesIO()
+        img.save(buf, format=fmt, quality=88 if fmt == "JPEG" else None)
+        encoded = _b64.b64encode(buf.getvalue()).decode("ascii")
+        return f"data:{mime};base64,{encoded}"
+    except Exception:
+        return f"data:image/png;base64,{_b64.b64encode(raw).decode()}"
 async def api_create_canvas_comfy_task(req: ComfyGenerateRequest):
     """创建 ComfyUI 画布任务（异步）"""
     task_id = f"canvas_comfy_{uuid.uuid4().hex}"

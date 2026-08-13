@@ -21,6 +21,7 @@ from httpx import AsyncClient, Timeout, Limits
 
 TIMEOUT_PRESETS = {
     "quick":   Timeout(connect=10, read=15,  write=10, pool=10),
+    "fast":    Timeout(connect=10, read=30,  write=20, pool=10),
     "normal":  Timeout(connect=20, read=120, write=30, pool=20),
     "long":    Timeout(connect=20, read=1800, write=120, pool=20),
     "xlong":   Timeout(connect=20, read=600, write=600, pool=20),

@@ -14,8 +14,8 @@ from ..system.providers import (
 from ..core.websocket import manager as ws_manager
 from ..core.http_client import create_client
 from ..canvas.manager import load_canvas, save_canvas, canvas_output_dir, CanvasConflictError
-from ..config import CANVAS_FILES_DIR, OUTPUT_DIR, HISTORY_PATH, HISTORY_MAX_ENTRIES
-from .gateways.openai import OpenAIGateway, ImageGenerationError
+from ..config import CANVAS_FILES_DIR, OUTPUT_DIR, HISTORY_PATH, HISTORY_MAX_ENTRIES, ONLINE_IMAGE_REFERENCE_MAX
+from .gateways.openai import OpenAIGateway
 from .gateways.gemini import GeminiGateway
 from .gateways.volcengine import VolcengineGateway
 from .gateways.modelscope import ModelScopeGateway
@@ -35,21 +35,26 @@ async def generate_image(
     model: str = "",
     quality: str = "auto",
     n: int = 1,
-    provider_id: str = "comfly",
+    provider_id: str = "",
     reference_images: list | None = None,
     canvas_id: str | None = None,
     client_id: str | None = None,
 ) -> dict:
+    if not provider_id:
+        raise ValueError("请选择供应商")
     provider = await get_provider(provider_id)
     if not provider:
-        raise ValueError(f"供应商 {provider_id} 不存在")
+        raise ValueError(f"供应商 {provider_id} 不存在，请在 API 设置中配置")
 
     proto = effective_protocol(provider, model)
     if not model:
         model = _default_model(provider)
 
+    # 参考图数量截断（防止上游 API 被大量 ref 打爆）
+    safe_refs = reference_images[:ONLINE_IMAGE_REFERENCE_MAX] if reference_images else None
+
     # 协议分发
-    urls = await _dispatch(provider, proto, prompt, size, model, quality, n, reference_images)
+    urls = await _dispatch(provider, proto, prompt, size, model, quality, n, safe_refs)
 
     # 下载到本地（失败用原 URL）
     local_urls = [await _download_or_keep(url, canvas_id) for url in urls]
@@ -287,9 +292,48 @@ def _default_model(provider: dict) -> str:
 # 视频生成
 # ============================================================
 
+async def _add_video_nodes_to_canvas(
+    canvas_id: str, urls: list[str], prompt: str, model: str, provider_id: str,
+):
+    """在画布上添加生成视频节点，乐观锁冲突自动重试"""
+    for attempt in range(3):
+        try:
+            canvas = await load_canvas(canvas_id)
+        except FileNotFoundError:
+            return
+
+        nodes = list(canvas.get("nodes", []))
+        for url in urls:
+            nodes.append({
+                "id": f"node_{uuid.uuid4().hex[:8]}",
+                "type": "video",
+                "x": 100 + len(nodes) * 50,
+                "y": 100 + len(nodes) * 50,
+                "width": 512,
+                "height": 512,
+                "data": {
+                    "url": url,
+                    "prompt": prompt,
+                    "model": model,
+                    "provider": provider_id,
+                },
+            })
+
+        try:
+            await save_canvas(
+                canvas_id, nodes=nodes,
+                base_updated_at=canvas.get("updated_at"),
+            )
+            return
+        except CanvasConflictError:
+            if attempt >= 2:
+                return
+            await asyncio.sleep(0.1 * (attempt + 1))
+
+
 async def generate_video(
     prompt: str,
-    provider_id: str = "comfly",
+    provider_id: str = "",
     model: str = "",
     duration: int = 5,
     aspect_ratio: str = "16:9",
@@ -302,9 +346,11 @@ async def generate_video(
     client_id: str | None = None,
     **kwargs,
 ) -> dict:
+    if not provider_id:
+        raise ValueError("请选择供应商")
     provider = await get_provider(provider_id)
     if not provider:
-        raise ValueError(f"供应商 {provider_id} 不存在")
+        raise ValueError(f"供应商 {provider_id} 不存在，请在 API 设置中配置")
 
     proto = effective_protocol(provider, model)
     if not model:
@@ -325,20 +371,36 @@ async def generate_video(
     elif is_runninghub_provider(provider):
         gw = RunningHubGateway(provider)
         urls = await gw.generate(prompt, model=model, reference_images=images)
-    # 火山方舟视频
+    # 火山方舟视频（Seedance）
     elif is_volcengine_provider(provider):
         gw = VolcengineGateway(provider)
-        urls = await gw.generate(prompt, model=model)
+        urls = await gw.generate_video(
+            prompt=prompt, model=model, duration=duration,
+            aspect_ratio=aspect_ratio, resolution=resolution, size=size,
+            images=images, videos=videos, audios=audios,
+            **kwargs,
+        )
     else:
-        # OpenAI 兼容视频
+        # OpenAI 兼容视频（含 APIMart VEO 3.1 / Seedance）
         gw = OpenAIGateway(provider)
-        urls = await gw.generate(prompt, model=model)
+        urls = await gw.generate_video(
+            prompt=prompt, model=model, duration=duration,
+            aspect_ratio=aspect_ratio, resolution=resolution, size=size,
+            images=images, videos=videos, audios=audios,
+            **kwargs,
+        )
 
     # 下载到本地
     local_urls = []
     for url in urls:
         local = await _download_or_keep(url, canvas_id)
         local_urls.append(local)
+
+    # 添加视频节点到画布
+    if canvas_id:
+        await _add_video_nodes_to_canvas(
+            canvas_id, local_urls, prompt, model, provider_id,
+        )
 
     # 记录历史 & 广播
     await _save_history({

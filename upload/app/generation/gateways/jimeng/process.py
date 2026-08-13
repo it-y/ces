@@ -16,11 +16,27 @@ import json
 import os
 import re
 import time
+from json import JSONDecodeError
 from pathlib import Path
 from ....core.http_client import create_client
 from ....config import (
     JIMENG_DEFAULT_POLL_SECONDS,
     BASE_DIR)
+
+# 最低 CLI 版本要求（低于此版本 submit_id 格式不兼容）
+JIMENG_MIN_CLI_VERSION = (1, 4, 2)
+
+
+class JimengPendingError(Exception):
+    """
+    即梦任务在云端排队中，CLI 超时但任务已提交。
+    前端应展示"排队中"卡片并轮询。
+    """
+    def __init__(self, message: str = "任务已提交，在云端排队中",
+                 submit_id: str = "", queue_info: dict | None = None):
+        super().__init__(message)
+        self.submit_id = submit_id
+        self.queue_info = queue_info or {}
 
 
 class JimengSubprocess:
@@ -29,6 +45,7 @@ class JimengSubprocess:
     def __init__(self):
         self._login_process: asyncio.subprocess.Process | None = None
         self._login_output: list[str] = []
+        self._cli_version_cache: tuple | None = None
 
     # ---- 环境探测 ----
 
@@ -43,7 +60,6 @@ class JimengSubprocess:
     def _cli_base_args(self) -> list[str]:
         exe = self._cli_executable()
         if self._use_wsl():
-            # 探测 WSL 发行版
             return ["wsl.exe", "-d", "Ubuntu", "--", "dreamina"]
         return [exe]
 
@@ -66,11 +82,41 @@ class JimengSubprocess:
                 proc.communicate(), timeout=timeout
             )
             output = self._decode_output(stdout, stderr)
-            return self._extract_json(output)
+            result = self._extract_json(output)
+            if result is None:
+                # 尝试查找 submit_id（CLI 可能在输出中包含了提交 ID）
+                submit_id = self._find_submit_id(output)
+                if submit_id:
+                    raise JimengPendingError(
+                        f"任务已提交 (id={submit_id[:16]}...)，在云端排队中",
+                        submit_id=submit_id,
+                    )
+                raise RuntimeError(f"即梦 CLI 无有效输出: {output[:200]}")
+            return result
         except asyncio.TimeoutError:
-            return None
-        except Exception:
-            return None
+            # CLI 超时，检查是否有部分输出含 submit_id
+            raise JimengPendingError(
+                "即梦任务在云端排队中，请稍后查询",
+                queue_info={"note": "CLI 超时，任务可能仍在云端执行"},
+            )
+        except JimengPendingError:
+            raise
+        except RuntimeError:
+            raise
+        except Exception as e:
+            # 网络连接失败等 → 不静默吞掉
+            raise RuntimeError(f"即梦 CLI 执行异常: {e}") from e
+
+    # ---- submit_id 提取 ----
+
+    def _find_submit_id(self, text: str) -> str | None:
+        """从 CLI 输出中提取 submit_id"""
+        # 匹配 "submit_id": "xxx" 或 submit_id: xxx
+        for pattern in (r'"submit_id"\s*:\s*"([^"]+)"', r'submit_id[\s:=]+([a-zA-Z0-9_-]+)'):
+            m = re.search(pattern, text)
+            if m:
+                return m.group(1)
+        return None
 
     # ---- 输出解析 ----
 
@@ -84,17 +130,53 @@ class JimengSubprocess:
         return stdout.decode("utf-8", errors="replace") + "\n" + stderr.decode("utf-8", errors="replace")
 
     def _extract_json(self, text: str) -> dict | None:
-        """从 CLI 输出中提取 JSON（支持嵌套 + 多 JSON 选最优）"""
+        """
+        从 CLI 输出中提取最相关的 JSON 对象。
+        优先用 json.JSONDecoder.raw_decode（支持嵌套），
+        回退 regex（不支持嵌套但覆盖简单场景）。
+        """
         candidates = []
-        for m in re.finditer(r"\{[^{}]*\}", text, re.DOTALL):
+
+        # 方法 1: raw_decode（支持嵌套 JSON）
+        idx = 0
+        while idx < len(text):
+            brace = text.find("{", idx)
+            if brace == -1:
+                break
             try:
-                obj = json.loads(m.group())
-                candidates.append((len(m.group()), obj))
-            except json.JSONDecodeError:
-                pass
+                decoder = json.JSONDecoder()
+                obj, end = decoder.raw_decode(text, brace)
+                candidates.append((end - brace, obj))
+                idx = brace + max(end - brace, 1)
+            except JSONDecodeError:
+                idx = brace + 1
+
+        # 方法 2: regex fallback（简单场景更快）
+        if not candidates:
+            for m in re.finditer(r"\{[^{}]*\}", text):
+                try:
+                    obj = json.loads(m.group())
+                    candidates.append((len(m.group()), obj))
+                except JSONDecodeError:
+                    pass
+
         if not candidates:
             return None
-        candidates.sort(key=lambda x: -x[0])
+
+        # 评分：优先选择含关键字段的对象
+        priority_keys = ("submit_id", "gen_status", "result_json", "images", "videos",
+                         "outputs", "status", "url", "remote_url", "image_url")
+        def _score(candidate: tuple) -> int:
+            size, obj = candidate
+            if not isinstance(obj, dict):
+                return size
+            bonus = 0
+            for key in priority_keys:
+                if key in obj:
+                    bonus += 100
+            return size + bonus
+
+        candidates.sort(key=_score, reverse=True)
         return candidates[0][1]
 
     # ---- 登录 ----

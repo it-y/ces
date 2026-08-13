@@ -5,7 +5,8 @@
   dreamina image generate --model 5.0 --prompt "..." --size 1024x1024
 """
 
-from .process import jimeng_subprocess
+from .process import jimeng_subprocess, JimengPendingError
+from ..openai import ImageGenerationError
 
 
 class JimengImageGateway:
@@ -32,9 +33,15 @@ class JimengImageGateway:
             if ref_url:
                 args += ["--image", ref_url]
 
-        result = await jimeng_subprocess.run(args)
-        if result is None:
-            raise Exception("即梦图片生成失败，请检查 CLI 是否已安装和登录")
+        try:
+            result = await jimeng_subprocess.run(args)
+        except JimengPendingError as e:
+            raise ImageGenerationError(
+                str(e) or "即梦任务在云端排队中，请稍后查询",
+                202,  # 202 Accepted — 任务仍在处理中
+            )
+        except RuntimeError as e:
+            raise ImageGenerationError(str(e), 502)
 
         return self._extract_urls(result)
 
