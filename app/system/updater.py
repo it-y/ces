@@ -192,7 +192,9 @@ async def _do_download(source: str) -> Path:
 
 async def _fetch_github_file_list() -> list[str]:
     headers = _github_auth_headers()
-    async with create_client("normal") as client:
+    # GitHub（api.github.com / raw.githubusercontent.com）在国内直连常被墙，
+    # 需要走系统代理（VPN）；并跟随重定向（raw 对部分文件会返回 302）。
+    async with create_client("normal", trust_env=True, follow_redirects=True) as client:
         tree_code = None
         resp = await client.get(GITHUB_TREE_URL, headers=headers)
         tree_code = resp.status_code
@@ -212,7 +214,7 @@ async def _fetch_github_file_list() -> list[str]:
 
 async def _fetch_modelscope_file_list() -> list[str]:
     headers = _modelscope_auth_headers()
-    async with create_client("normal") as client:
+    async with create_client("normal", follow_redirects=True) as client:
         all_files = []
         page = 1
         while True:
@@ -248,12 +250,16 @@ async def _download_files(source: str, files: list[str], staging: Path):
     async def download_one(path: str):
         url = f"{GITHUB_RAW_ROOT}/{path}" if source == "github" else f"{MODELSCOPE_FILE_API_ROOT}{path}"
         headers = gh_headers if source == "github" else ms_headers
+        # GitHub 走系统代理（国内直连 raw 常被墙）+ 跟随重定向；魔塔直连即可
+        client_kwargs = {"follow_redirects": True}
+        if source == "github":
+            client_kwargs["trust_env"] = True
         last_err = ""
         # 单文件重试：瞬时错误（限流 429 / 5xx / 连接异常）重试最多 3 次
         for attempt in range(3):
             try:
                 async with semaphore:
-                    async with create_client("normal") as client:
+                    async with create_client("normal", **client_kwargs) as client:
                         resp = await client.get(url, headers=headers)
                 if resp.status_code != 200:
                     if resp.status_code in (429, 500, 502, 503, 504) and attempt < 2:

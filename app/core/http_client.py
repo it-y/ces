@@ -74,9 +74,24 @@ def _cache_strategy(host: str, strategy: str) -> None:
 
 
 @asynccontextmanager
-async def create_client(preset: str = "normal"):
-    """向后兼容：返回直连客户端。新代码请用 request_with_fallback。"""
-    yield _get_direct_client(preset)
+async def create_client(preset: str = "normal", trust_env: bool | None = None, follow_redirects: bool = False):
+    """
+    返回 HTTP 客户端。
+    - 默认：共享直连客户端（trust_env=False，国内中转站无需代理）
+    - 传入 trust_env/follow_redirects 时：创建一次性专用客户端（用完即关）
+      （用于更新下载等需要走系统代理/跟随重定向的场景）
+    """
+    if trust_env is None and not follow_redirects:
+        yield _get_direct_client(preset)
+        return
+    timeout = TIMEOUT_PRESETS.get(preset, TIMEOUT_PRESETS["normal"])
+    client = AsyncClient(
+        timeout=timeout, limits=LIMITS,
+        trust_env=trust_env if trust_env is not None else False,
+        follow_redirects=follow_redirects,
+    )
+    yield client
+    await client.aclose()
 
 
 @asynccontextmanager
