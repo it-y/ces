@@ -14,7 +14,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.resolve()
 
 # Keep consistent with updater.py ALLOWED_SOURCE_PREFIXES
-ALLOWED_PREFIXES = {"app/", "static/", "upload/", "workflows/", "VERSION"}
+ALLOWED_PREFIXES = {"app/", "static/", "workflows/", "VERSION"}
 
 DATASET_ID = "ytk001/ces"
 

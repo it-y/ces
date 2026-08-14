@@ -26,7 +26,7 @@ _update_lock = asyncio.Lock()
 
 STAGING_REQUIRED_FILES = {"VERSION", "app/main.py", "static/index.html"}
 
-ALLOWED_SOURCE_PREFIXES = {"app/", "static/", "upload/", "workflows/", "VERSION"}
+ALLOWED_SOURCE_PREFIXES = {"app/", "static/", "workflows/", "VERSION"}
 
 EXCLUDED_PREFIXES = {
     "data/", "__pycache__/", ".venv/", "venv/",
