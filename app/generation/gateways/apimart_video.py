@@ -441,7 +441,10 @@ async def poll_video_task(client, provider: dict, task_id: str, submit_url: str 
                     key = f"Bearer {key}"
                 if key:
                     headers["Authorization"] = key
-                response = await client.get(task_url, headers=headers)
+                from ...core.http_client import request_with_fallback
+                response = await request_with_fallback(
+                    "GET", task_url, timeout_preset="fast", headers=headers,
+                )
                 response.raise_for_status()
                 raw = response.json()
                 break

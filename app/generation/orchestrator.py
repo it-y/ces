@@ -12,7 +12,6 @@ from ..system.providers import (
     is_jimeng_provider, is_runninghub_provider, is_volcengine_provider,
 )
 from ..core.websocket import manager as ws_manager
-from ..core.http_client import create_client
 from ..canvas.manager import load_canvas, save_canvas, canvas_output_dir, CanvasConflictError
 from ..config import CANVAS_FILES_DIR, OUTPUT_DIR, HISTORY_PATH, HISTORY_MAX_ENTRIES, ONLINE_IMAGE_REFERENCE_MAX
 from .gateways.openai import OpenAIGateway
@@ -148,23 +147,23 @@ async def _download_or_keep(url: str, canvas_id: str | None = None) -> str:
 
     # 远程 HTTP URL → 下载（带重试）
     elif url.startswith("http"):
-        async with create_client("normal") as client:
-            for attempt in range(3):
-                try:
-                    ext = _guess_ext(url)
-                    resp = await client.get(url)
-                    if resp.status_code != 200:
-                        if attempt < 2:
-                            await asyncio.sleep(2 ** attempt)
-                            continue
-                        return url
-                    content = resp.content
-                    break
-                except Exception:
+        from ..core.http_client import request_with_fallback
+        for attempt in range(3):
+            try:
+                ext = _guess_ext(url)
+                resp = await request_with_fallback("GET", url, timeout_preset="normal")
+                if resp.status_code != 200:
                     if attempt < 2:
                         await asyncio.sleep(2 ** attempt)
                         continue
                     return url
+                content = resp.content
+                break
+            except Exception:
+                if attempt < 2:
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                return url
 
     if content is None:
         return url

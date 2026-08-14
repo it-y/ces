@@ -17,6 +17,7 @@ import asyncio
 import time
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
+import httpx
 from httpx import AsyncClient, Timeout, Limits
 
 TIMEOUT_PRESETS = {
@@ -124,7 +125,8 @@ async def request_with_fallback(
       4. 全失败 → 抛出最后一个异常
       5. 成功 → 缓存策略，5 分钟后过期
 
-    4xx 响应不重试（业务错误，重试没用）。
+    429 限流：读 Retry-After 头等待后重试一次，仍 429 则返回响应（上层转中文提示）。
+    其余 4xx 不重试（业务错误，重试没用）。
     """
     host = _host_from_url(url)
 
@@ -134,11 +136,16 @@ async def request_with_fallback(
         client = _get_proxy_client(timeout_preset) if cached == "proxy" else _get_direct_client(timeout_preset)
         try:
             resp = await client.request(method, url, **kwargs)
-            if 400 <= resp.status_code < 500:
-                return resp
-            if resp.status_code < 600:
+            if resp.status_code == 429:
+                resp = await _retry_after_429(client, method, url, kwargs, resp)
                 _cache_strategy(host, cached)
                 return resp
+            if 400 <= resp.status_code < 500:
+                _cache_strategy(host, cached)
+                return resp
+            if resp.status_code < 600:
+                # 5xx：缓存策略失效，走完整探测（重试直连+代理），行为与未命中一致
+                _strategy_cache.pop(host, None)
         except Exception:
             _strategy_cache.pop(host, None)  # 缓存失效，重新探测
             # fall through 到完整探测
@@ -150,17 +157,23 @@ async def request_with_fallback(
     for attempt in range(min(max_retries, 2)):
         try:
             resp = await direct.request(method, url, **kwargs)
+            if resp.status_code == 429:
+                resp = await _retry_after_429(direct, method, url, kwargs, resp)
+                _cache_strategy(host, "direct")
+                return resp
             if 400 <= resp.status_code < 500:
                 _cache_strategy(host, "direct")
                 return resp
-            if resp.status_code < 600:
-                _cache_strategy(host, "direct")
-                return resp
-            # 5xx：可能是临时故障，重试
-            if attempt < 1:
-                await asyncio.sleep(2 ** attempt)
-                continue
-            last_error = Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
+            if 500 <= resp.status_code < 600:
+                # 5xx：可能是临时故障，重试一次；仍 5xx 则不再直连，跳代理
+                if attempt < 1:
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                last_error = Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
+                break
+            # 2xx/3xx：成功
+            _cache_strategy(host, "direct")
+            return resp
         except Exception as e:
             last_error = e
             if _is_transient_error(e) and attempt < 1:
@@ -174,16 +187,23 @@ async def request_with_fallback(
     for attempt in range(min(max_retries, 2)):
         try:
             resp = await proxy.request(method, url, **kwargs)
+            if resp.status_code == 429:
+                resp = await _retry_after_429(proxy, method, url, kwargs, resp)
+                _cache_strategy(host, "proxy")
+                return resp
             if 400 <= resp.status_code < 500:
                 _cache_strategy(host, "proxy")
                 return resp
-            if resp.status_code < 600:
-                _cache_strategy(host, "proxy")
-                return resp
-            if attempt < 1:
-                await asyncio.sleep(2 ** attempt)
-                continue
-            last_error = Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
+            if 500 <= resp.status_code < 600:
+                # 5xx：可能是临时故障，重试一次；仍 5xx 作为最终失败
+                if attempt < 1:
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                last_error = Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
+                break
+            # 2xx/3xx：成功
+            _cache_strategy(host, "proxy")
+            return resp
         except Exception as e:
             last_error = e
             if _is_transient_error(e) and attempt < 1:
@@ -192,6 +212,26 @@ async def request_with_fallback(
             break
 
     raise last_error or Exception(f"请求失败（已尝试直连+代理）: {url}")
+
+
+async def _retry_after_429(client, method: str, url: str, kwargs: dict, resp):
+    """429 限流：读 Retry-After 头（或默认退避），等待后重试一次。
+
+    若重试成功（非 429）返回新响应；仍 429 返回原 429 响应（上层转中文提示）。
+    """
+    wait = 1.0
+    retry_after = resp.headers.get("Retry-After") or resp.headers.get("retry-after")
+    if retry_after:
+        try:
+            wait = min(float(retry_after), 10.0)
+        except ValueError:
+            wait = 1.0
+    await asyncio.sleep(wait)
+    try:
+        resp2 = await client.request(method, url, **kwargs)
+        return resp2
+    except Exception:
+        return resp
 
 
 def _is_transient_error(e: Exception) -> bool:
@@ -208,23 +248,24 @@ def _is_transient_error(e: Exception) -> bool:
 
 async def retry_request(method: str, url: str, **kwargs):
     """
-    直连 HTTP 请求 + 指数退避重试（不经过代理，与 LLM 路由行为一致）。
+    直连优先 + 代理兜底 + 指数退避重试。
 
-    5xx 和连接异常自动重试（最多 3 次），4xx 立即返回。
+    委托 request_with_fallback（单一重试/兜底来源）：5xx 与连接异常自动重试，
+    429 按 Retry-After 等待后重试一次，其余 4xx 立即返回。
+
+    全失败（网络异常/所有重试耗尽）时：返回一个 502 模拟响应而非抛出网络异常，
+    让调用方统一走「status_code != 200 → 抛友好中文错误」路径，避免
+    httpx 的 ConnectError/Timeout 等异常漏到上层变成 500。
     """
-    async with create_client("long") as client:
-        for attempt in range(3):
-            try:
-                resp = await client.request(method, url, **kwargs)
-                if resp.status_code >= 500 and attempt < 2:
-                    await asyncio.sleep(2 ** attempt)
-                    continue
-                return resp
-            except Exception:
-                if attempt < 2:
-                    await asyncio.sleep(2 ** attempt)
-                    continue
-                raise
+    try:
+        return await request_with_fallback(method, url, timeout_preset="long", **kwargs)
+    except Exception as e:
+        req = httpx.Request(method, url)
+        return httpx.Response(
+            502,
+            text=f"请求失败：{e}",
+            request=req,
+        )
 
 
 async def close_clients():

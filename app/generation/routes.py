@@ -95,7 +95,9 @@ async def _run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
             CANVAS_TASKS[task_id]["status"] = "running"
             CANVAS_TASKS[task_id]["updated_at"] = time.time()
             _save_tasks()
-    from ..config import CANVAS_IMAGE_TASK_TIMEOUT
+    # 看门狗超时按协议区分：异步轮询型（apimart/runninghub/modelscope 等）任务
+    # 常需要排队等待，给足与轮询预算一致的时间，避免慢任务被总超时误砍。
+    timeout = await _task_timeout_for(payload.provider_id)
     try:
         # 任务级看门狗：上游接口挂起（不返回响应）时，超时后标记失败，
         # 否则前端会无限等待、计时器一直累加
@@ -106,7 +108,7 @@ async def _run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
                 reference_images=[ref.model_dump() for ref in payload.reference_images] if payload.reference_images else None,
                 canvas_id=payload.canvas_id, client_id=payload.client_id,
             ),
-            timeout=CANVAS_IMAGE_TASK_TIMEOUT,
+            timeout=timeout,
         )
         async with _task_lock:
             CANVAS_TASKS[task_id].update({
@@ -117,7 +119,7 @@ async def _run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
             })
             _save_tasks()
     except asyncio.TimeoutError:
-        detail = f"图片生成超时（{int(CANVAS_IMAGE_TASK_TIMEOUT)} 秒内未完成）。可能是上游接口无响应，请重试；若持续失败请更换模型或供应商。"
+        detail = f"图片生成超时（{int(timeout)} 秒内未完成）。可能是上游接口无响应，请重试；若持续失败请更换模型或供应商。"
         log.warning("canvas image task %s timed out", task_id)
         async with _task_lock:
             CANVAS_TASKS[task_id].update({
@@ -135,6 +137,39 @@ async def _run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
                 "updated_at": time.time(),
             })
             _save_tasks()
+
+
+async def _task_timeout_for(provider_id: str) -> float:
+    """按协议返回看门狗超时（秒）。异步轮询型给长超时，同步型给默认 300s。"""
+    try:
+        from ..system.providers import get_provider
+        from ..config import CANVAS_IMAGE_TASK_TIMEOUT, APIMART_IMAGE_TASK_TIMEOUT, IMAGE_TASK_TIMEOUT
+        if not provider_id:
+            return CANVAS_IMAGE_TASK_TIMEOUT
+        provider = _provider_cache.get(provider_id)
+        if provider is None:
+            provider = await get_provider(provider_id)
+            if provider:
+                _provider_cache[provider_id] = provider
+        if not provider:
+            return CANVAS_IMAGE_TASK_TIMEOUT
+        from ..system.providers import (
+            is_apimart_provider, is_runninghub_provider, is_modelscope_provider,
+            is_volcengine_provider, is_jimeng_provider,
+        )
+        if any(fn(provider) for fn in (
+            is_apimart_provider, is_runninghub_provider,
+            is_modelscope_provider, is_jimeng_provider,
+        )):
+            return max(CANVAS_IMAGE_TASK_TIMEOUT, APIMART_IMAGE_TASK_TIMEOUT)
+        if is_volcengine_provider(provider):
+            return max(CANVAS_IMAGE_TASK_TIMEOUT, IMAGE_TASK_TIMEOUT)
+        return CANVAS_IMAGE_TASK_TIMEOUT
+    except Exception:
+        return CANVAS_IMAGE_TASK_TIMEOUT
+
+
+_provider_cache: dict = {}
 
 
 @router.post("/online-image")

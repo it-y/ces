@@ -161,7 +161,8 @@ class VolcengineGateway:
         from ...core.http_client import retry_request
         resp = await retry_request("POST", url, content=body_str, headers=headers)
 
-        if resp.status_code != 200:
+        # 火山 Seedream 图片为同步返回 url，只接受 200/201/202
+        if resp.status_code >= 300:
             raise ImageGenerationError(friendly_image_error_detail(resp.text, size, model), resp.status_code)
 
         data = resp.json()
@@ -238,7 +239,7 @@ class VolcengineGateway:
         submit_url = self._video_endpoint()
         headers = self._sign_headers(body_str, url=submit_url)
 
-        from ...core.http_client import retry_request, create_client
+        from ...core.http_client import retry_request
 
         # 提交任务
         resp = await retry_request("POST", submit_url, content=body_str, headers=headers)
@@ -257,8 +258,8 @@ class VolcengineGateway:
         while time.monotonic() < deadline:
             await asyncio.sleep(3)
             poll_headers = self._sign_headers("", method="GET", url=poll_url)
-            async with create_client("normal") as client:
-                pr = await client.get(poll_url, headers=poll_headers)
+            from ...core.http_client import request_with_fallback
+            pr = await request_with_fallback("GET", poll_url, timeout_preset="normal", headers=poll_headers)
             if pr.status_code != 200:
                 continue
             pd = pr.json()

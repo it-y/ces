@@ -10,7 +10,7 @@ import os
 import time
 from typing import Optional
 
-from ..core.http_client import create_client
+from ..core.http_client import request_with_fallback
 
 # ---- 超时 & 间隔 ----
 
@@ -127,42 +127,45 @@ async def poll_image_task(task_id: str, provider: dict) -> dict:
     deadline = time.monotonic() + timeout
     last_payload = {}
 
-    async with create_client("fast") as client:
-        while time.monotonic() < deadline:
-            # 首次延迟（apimart 多等一会让服务端处理）
-            if initial_delay:
-                await asyncio.sleep(min(initial_delay, max(0.0, deadline - time.monotonic())))
-                initial_delay = 0
-                if time.monotonic() >= deadline:
-                    break
+    while time.monotonic() < deadline:
+        # 首次延迟（apimart 多等一会让服务端处理）
+        if initial_delay:
+            await asyncio.sleep(min(initial_delay, max(0.0, deadline - time.monotonic())))
+            initial_delay = 0
+            if time.monotonic() >= deadline:
+                break
 
-            # 查询任务状态
-            task_url = image_task_url_for_provider(provider, task_id)
-            resp = await client.get(
-                task_url,
+        # 查询任务状态
+        task_url = image_task_url_for_provider(provider, task_id)
+        try:
+            resp = await request_with_fallback(
+                "GET", task_url, timeout_preset="fast",
                 headers=_poll_headers(provider),
             )
-            if resp.status_code != 200:
-                last_payload = {}
-                await asyncio.sleep(min(interval, max(0.0, deadline - time.monotonic())))
-                continue
-
-            last_payload = resp.json()
-
-            # 检查状态
-            status = image_task_status(last_payload)
-
-            if not status:
-                # 无 status 字段 — 可能已经是结果（含 images），尝试发现 URL
-                if _payload_has_image_url(last_payload):
-                    return last_payload
-
-            if status in IMAGE_TASK_SUCCESS_STATUSES:
-                return last_payload
-            if status in IMAGE_TASK_FAILED_STATUSES:
-                raise RuntimeError(f"生图任务失败: {image_task_fail_reason(last_payload)}")
-
+        except Exception:
             await asyncio.sleep(min(interval, max(0.0, deadline - time.monotonic())))
+            continue
+        if resp.status_code != 200:
+            last_payload = {}
+            await asyncio.sleep(min(interval, max(0.0, deadline - time.monotonic())))
+            continue
+
+        last_payload = resp.json()
+
+        # 检查状态
+        status = image_task_status(last_payload)
+
+        if not status:
+            # 无 status 字段 — 可能已经是结果（含 images），尝试发现 URL
+            if _payload_has_image_url(last_payload):
+                return last_payload
+
+        if status in IMAGE_TASK_SUCCESS_STATUSES:
+            return last_payload
+        if status in IMAGE_TASK_FAILED_STATUSES:
+            raise RuntimeError(f"生图任务失败: {image_task_fail_reason(last_payload)}")
+
+        await asyncio.sleep(min(interval, max(0.0, deadline - time.monotonic())))
 
     raw_text = json.dumps(last_payload, ensure_ascii=False)[:800] if last_payload else ""
     extra = f"，最后响应：{raw_text}" if raw_text else ""

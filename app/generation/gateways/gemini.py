@@ -129,7 +129,8 @@ class GeminiGateway:
 
         resp = await retry_request("POST", url, json=body, headers=headers)
 
-        if resp.status_code != 200:
+        # Gemini 图片为同步返回（candidates 内嵌 base64），只接受 200/201/202
+        if resp.status_code >= 300:
             raise ImageGenerationError(friendly_image_error_detail(resp.text, size, model), resp.status_code)
 
         return self._parse_image_urls(resp.json())

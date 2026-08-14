@@ -193,22 +193,37 @@ class RunningHubGateway:
 
         resp = await retry_request("POST", url, json=body, headers=headers)
 
-        if resp.status_code != 200:
+        # 提交失败（非 200/201/202）
+        if resp.status_code not in (200, 201, 202):
             raise ImageGenerationError(f"RunningHub 提交失败：{resp.text[:200]}", resp.status_code)
 
         data = resp.json()
         task_id = data.get("data", {}).get("taskId") or data.get("taskId", "")
 
         if not task_id:
-            raise ImageGenerationError(f"RunningHub 未返回 taskId", 502)
+            # 可能仍在排队（高峰期常返回排队中状态但无 taskId）。
+            # 短时间内重试一次提交；仍无 taskId 再报错，避免排队被误判为失败。
+            await asyncio.sleep(2.0)
+            resp2 = await retry_request("POST", url, json=body, headers=headers)
+            if resp2.status_code in (200, 201, 202):
+                data2 = resp2.json()
+                task_id = data2.get("data", {}).get("taskId") or data2.get("taskId", "")
+            if not task_id:
+                raise ImageGenerationError(
+                    f"RunningHub 未返回 taskId（可能仍在排队），响应：{str(data)[:200]}",
+                    502,
+                )
 
         # 轮询
         poll_url = f"{RUNNINGHUB_OPENAPI_BASE_URL}/task/query"
         deadline = time.time() + IMAGE_TASK_TIMEOUT
 
         while time.time() < deadline:
-            async with create_client("normal") as client:
-                poll_resp = await client.post(poll_url, json={"taskId": task_id}, headers=headers)
+            from ...core.http_client import request_with_fallback
+            poll_resp = await request_with_fallback(
+                "POST", poll_url, timeout_preset="normal",
+                json={"taskId": task_id}, headers=headers,
+            )
             if poll_resp.status_code != 200:
                 await asyncio.sleep(IMAGE_POLL_INTERVAL)
                 continue

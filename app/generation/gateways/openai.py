@@ -157,12 +157,23 @@ class OpenAIGateway:
     # ---- retry 请求包装 ----
 
     async def _post_with_retry(self, url: str, **kwargs) -> dict:
-        """直连 POST + 重试，返回 JSON 响应体"""
+        """直连 POST + 重试，返回 JSON 响应体。
+
+        状态码判断改为「看内容」：200/201/202 是「已提交」成功响应，
+        body 里的 task_id 交给 _images_or_poll 走轮询，不再被一刀切判死。
+        其它状态码（4xx/5xx）一律按错误处理 —— 避免错误响应里的
+        error.id/request_id 被 extract_task_id 误判成异步任务、把
+        鉴权/限流错误错报成「生图任务超时」。
+        """
         resp = await retry_request("POST", url, **kwargs)
-        if resp.status_code != 200:
-            msg = friendly_image_error_detail(resp.text)
-            raise ImageGenerationError(msg, resp.status_code)
-        return resp.json()
+
+        # 成功状态码：返回 body（可能带图片 URL 或异步 task_id）
+        if resp.status_code in (200, 201, 202):
+            return resp.json()
+
+        # 其它状态码一律报错
+        msg = friendly_image_error_detail(resp.text)
+        raise ImageGenerationError(msg, resp.status_code)
 
     # ---- 简单生成（无参考图） ----
 

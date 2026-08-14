@@ -4,7 +4,7 @@ ModelScope 网关 — 图片生成（异步提交 + 轮询）。
 
 import asyncio
 import time
-from ...core.http_client import create_client, retry_request
+from ...core.http_client import retry_request
 from ...core.errors import friendly_image_error_detail
 from ...config import IMAGE_POLL_INTERVAL, IMAGE_TASK_TIMEOUT, MODELSCOPE_CHAT_BASE_URL
 from .openai import ImageGenerationError
@@ -62,11 +62,8 @@ class ModelScopeGateway:
             if task_id:
                 return await self._poll_task(task_id)
 
-        # 非 200 → 检查是否走异步轮询
-        task_id = data.get("task_id", "")
-        if task_id:
-            return await self._poll_task(task_id)
-
+        # 非 200 一律报错 —— 避免错误响应里的 task_id 被误判成异步任务、
+        # 把鉴权/限流错误错报成「轮询超时」
         raise ImageGenerationError(friendly_image_error_detail(resp.text, size, model), resp.status_code)
 
     def _submit_headers(self) -> dict:
@@ -90,8 +87,10 @@ class ModelScopeGateway:
         headers = self._poll_headers()
 
         while time.monotonic() < deadline:
-            async with create_client("normal") as client:
-                resp = await client.get(url, headers=headers)
+            from ...core.http_client import request_with_fallback
+            resp = await request_with_fallback(
+                "GET", url, timeout_preset="normal", headers=headers,
+            )
             if resp.status_code != 200:
                 await asyncio.sleep(IMAGE_POLL_INTERVAL)
                 continue
