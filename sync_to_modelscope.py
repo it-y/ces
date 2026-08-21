@@ -9,6 +9,7 @@ Before first use:
 import os
 import sys
 import json
+import time
 import zipfile
 import tempfile
 import shutil
@@ -102,23 +103,39 @@ def main():
     api.login(token)
 
     # 只上传 2 个文件：VERSION（版本探测用）+ update-{version}.zip（下载用）。
-    # upload_folder 自带同步删除：本地 staging 里没有的远端文件会被自动清理，
-    # 因此数据集里永远只有最新版本，不会越堆越多。
+    # sync_remote_repo=True：上传成功后自动删除远端本地没有的文件（散文件），
+    # 数据集永远只有最新 2 个文件，不会越堆越多。
+    # 相比"先清空再上传"更安全：上传失败时旧文件还在，不会把数据集搞空。
     staging = Path(tempfile.mkdtemp(prefix="ms_sync_"))
     try:
         (staging / "VERSION").write_text(version + "\n", encoding="utf-8")
         zip_path = build_release_zip(files, version, staging)
         size_kb = zip_path.stat().st_size / 1024
         print(f"Packed: {zip_path.name} ({size_kb:.1f} KB)")
-        print("Uploading VERSION + zip in one commit; old files will be auto-deleted...")
-        api.upload_folder(
-            repo_id=DATASET_ID,
-            repo_type="dataset",
-            folder_path=str(staging),
-            path_in_repo="",
-            commit_message=f"Release {version}",
-        )
-        print(f"Done. Version {version} synced to ModelScope (zip mode).")
+
+        # 整体重试：网络波动时自动重跑（上传是幂等的，重跑安全）
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                print(f"[{attempt}/{max_attempts}] Uploading VERSION + zip, sync-deleting remote leftovers...")
+                api.upload_folder(
+                    repo_id=DATASET_ID,
+                    repo_type="dataset",
+                    folder_path=str(staging),
+                    path_in_repo="",
+                    commit_message=f"Release {version}",
+                    sync_remote_repo=True,
+                )
+                print(f"Done. Version {version} synced to ModelScope (zip mode, sync-clean).")
+                return
+            except Exception as e:
+                if attempt < max_attempts:
+                    wait = 5 * attempt
+                    print(f"[{attempt}/{max_attempts}] 上传失败: {e}，{wait}s 后重试...")
+                    time.sleep(wait)
+                else:
+                    print(f"[ERROR] 重试 {max_attempts} 次仍失败: {e}")
+                    sys.exit(1)
     finally:
         shutil.rmtree(str(staging), ignore_errors=True)
 
