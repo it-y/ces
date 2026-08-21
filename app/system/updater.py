@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import time
+import zipfile
 from pathlib import Path
 from ..config import (
     BASE_DIR, DATA_DIR, GITHUB_REPO_URL,
@@ -175,19 +176,72 @@ async def _do_download(source: str) -> Path:
     staging.mkdir(parents=True, exist_ok=True)
 
     if source == "github":
+        # GitHub：保持逐文件下载（网络好时直连快），不动。
         file_list = await _fetch_github_file_list()
+        allowed_files = [p for p in file_list if _is_allowed_path(p)]
+        if not allowed_files:
+            raise RuntimeError(f"No allowed files found from {source}")
+        await _download_files(source, allowed_files, staging)
     else:
-        file_list = await _fetch_modelscope_file_list()
-
-    allowed_files = [p for p in file_list if _is_allowed_path(p)]
-    if not allowed_files:
-        raise RuntimeError(f"No allowed files found from {source}")
-
-    await _download_files(source, allowed_files, staging)
+        # ModelScope：优先下载 update-{version}.zip（1 次请求，快），
+        # zip 不存在/下载失败时回退逐文件下载（兼容过渡期旧数据集）。
+        if not await _download_modelscope_zip(staging):
+            file_list = await _fetch_modelscope_file_list()
+            allowed_files = [p for p in file_list if _is_allowed_path(p)]
+            if not allowed_files:
+                raise RuntimeError(f"No allowed files found from {source}")
+            await _download_files(source, allowed_files, staging)
 
     _validate_staging_has_required(staging)
 
     return staging
+
+
+async def _download_modelscope_zip(staging: Path) -> bool:
+    """从 ModelScope 下载 update-{version}.zip 并安全解压到 staging。
+
+    成功返回 True；zip 不存在（404）、版本读不到或网络失败返回 False（调用方回退逐文件）。
+    """
+    headers = _modelscope_auth_headers()
+    try:
+        resp = await request_with_fallback(
+            "GET", MODELSCOPE_VERSION_URL, timeout_preset="normal",
+            follow_redirects=True, headers=headers,
+        )
+        if resp.status_code != 200:
+            return False
+        version = resp.text.strip().splitlines()[0].strip()
+        if not version:
+            return False
+
+        url = f"{MODELSCOPE_FILE_API_ROOT}update-{version}.zip"
+        resp = await request_with_fallback(
+            "GET", url, timeout_preset="long",
+            follow_redirects=True, headers=headers,
+        )
+        if resp.status_code != 200:
+            return False
+
+        zip_path = staging / "_update.zip"
+        zip_path.write_bytes(resp.content)
+
+        extracted = 0
+        with zipfile.ZipFile(zip_path) as zf:
+            for member in zf.namelist():
+                if member.endswith("/"):  # 目录条目
+                    continue
+                if not _is_allowed_path(member):  # 白名单校验，防路径穿越/多余文件
+                    continue
+                dest = staging / member
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(member) as src, open(dest, "wb") as out:
+                    shutil.copyfileobj(src, out)
+                extracted += 1
+
+        zip_path.unlink(missing_ok=True)
+        return extracted > 0
+    except Exception:
+        return False
 
 
 async def _fetch_github_file_list() -> list[str]:

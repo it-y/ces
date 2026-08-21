@@ -9,6 +9,9 @@ Before first use:
 import os
 import sys
 import json
+import zipfile
+import tempfile
+import shutil
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.resolve()
@@ -62,6 +65,16 @@ def collect_files() -> list[Path]:
     return sorted(set(files))
 
 
+def build_release_zip(files: list[Path], version: str, out_dir: Path) -> Path:
+    """把所有更新文件打成一个 update-{version}.zip（zip 内为相对路径，与 updater 白名单一致）。"""
+    zip_path = out_dir / f"update-{version}.zip"
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f in files:
+            rel = f.relative_to(BASE_DIR).as_posix()
+            zf.write(str(f), rel)
+    return zip_path
+
+
 def main():
     token = load_token()
     if not token:
@@ -77,7 +90,7 @@ def main():
     print(f"Target:  {DATASET_ID}")
 
     files = collect_files()
-    print(f"Files to upload: {len(files)}")
+    print(f"Files to package: {len(files)}")
 
     try:
         from modelscope.hub.api import HubApi
@@ -88,17 +101,16 @@ def main():
     api = HubApi()
     api.login(token)
 
-    # Build staging dir, copy all files, upload in one commit
-    import tempfile, shutil
+    # 只上传 2 个文件：VERSION（版本探测用）+ update-{version}.zip（下载用）。
+    # upload_folder 自带同步删除：本地 staging 里没有的远端文件会被自动清理，
+    # 因此数据集里永远只有最新版本，不会越堆越多。
     staging = Path(tempfile.mkdtemp(prefix="ms_sync_"))
     try:
-        for f in files:
-            rel = f.relative_to(BASE_DIR).as_posix()
-            dst = staging / rel
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(str(f), str(dst))
-
-        print(f"Uploading {len(files)} files in one commit...")
+        (staging / "VERSION").write_text(version + "\n", encoding="utf-8")
+        zip_path = build_release_zip(files, version, staging)
+        size_kb = zip_path.stat().st_size / 1024
+        print(f"Packed: {zip_path.name} ({size_kb:.1f} KB)")
+        print("Uploading VERSION + zip in one commit; old files will be auto-deleted...")
         api.upload_folder(
             repo_id=DATASET_ID,
             repo_type="dataset",
@@ -106,7 +118,7 @@ def main():
             path_in_repo="",
             commit_message=f"Release {version}",
         )
-        print(f"Done. Version {version} synced to ModelScope.")
+        print(f"Done. Version {version} synced to ModelScope (zip mode).")
     finally:
         shutil.rmtree(str(staging), ignore_errors=True)
 
