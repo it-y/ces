@@ -77,38 +77,43 @@ def build_release_zip(files: list[Path], version: str, out_dir: Path) -> Path:
     return zip_path
 
 
-def git_clean_remote(token: str) -> None:
-    """用 git 删除数据集里除 VERSION / update-*.zip / .gitattributes 外的所有文件。
+def git_clean_remote(token: str, keep_version: str) -> None:
+    """用 git 删除数据集里除 VERSION / 当前 update-{version}.zip / .gitattributes 外的所有文件。
 
     说明：ModelScope 的 SDK 同步删除（sync_remote_repo）会因仓库策略被拒（400），
-    而 git 协议的删除提交是允许的。这里只删不增（zip 内容不变，LFS 对象不动），
-    因此不需要安装 git-lfs。
+    而 git 协议的删除提交是允许的。这里只删不增（当前 zip 内容不变，LFS 对象不动），
+    因此不需要安装 git-lfs。git 命令禁用 LFS filter，避免本机无 git-lfs 时 add 失败。
     """
     tmp = Path(tempfile.mkdtemp(prefix="ms_clean_"))
     env = {**os.environ, "GIT_LFS_SKIP_SMUDGE": "1", "GIT_TERMINAL_PROMPT": "0"}
+    git_base = [
+        "git",
+        "-c", "filter.lfs.process=",
+        "-c", "filter.lfs.clean=",
+        "-c", "filter.lfs.smudge=",
+        "-c", "filter.lfs.required=false",
+    ]
     try:
         url = f"https://oauth2:{token}@www.modelscope.cn/datasets/{DATASET_ID}.git"
         repo = tmp / "repo"
-        subprocess.run(
-            ["git", "clone", "--depth", "1", url, str(repo)],
-            check=True, env=env, capture_output=True,
-        )
-        keep_names = {"VERSION", ".gitattributes"}
+        subprocess.run(["git", "clone", "--depth", "1", url, str(repo)],
+                       check=True, env=env)
+        keep_names = {"VERSION", ".gitattributes", f"update-{keep_version}.zip"}
         for entry in repo.iterdir():
-            if entry.name in keep_names or (entry.name.startswith("update-") and entry.name.endswith(".zip")):
+            if entry.name in keep_names:
                 continue
             if entry.is_dir():
                 shutil.rmtree(entry)
             else:
                 entry.unlink()
-        subprocess.run(["git", "add", "-A"], cwd=repo, check=True, env=env, capture_output=True)
+        subprocess.run([*git_base, "add", "-A"], cwd=repo, check=True, env=env)
         subprocess.run(
-            ["git", "-c", "user.name=release", "-c", "user.email=release@local",
-             "commit", "-m", "clean: keep only VERSION + update zip"],
-            cwd=repo, check=True, env=env, capture_output=True,
+            [*git_base, "-c", "user.name=release", "-c", "user.email=release@local",
+             "commit", "-m", f"clean: keep only VERSION + update-{keep_version}.zip"],
+            cwd=repo, check=True, env=env,
         )
-        subprocess.run(["git", "push", "origin", "HEAD"], cwd=repo, check=True, env=env, capture_output=True)
-        print("Clean done. Remote keeps only VERSION + update-*.zip.")
+        subprocess.run([*git_base, "push", "origin", "HEAD"], cwd=repo, check=True, env=env)
+        print(f"Clean done. Remote keeps only VERSION + update-{keep_version}.zip.")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -163,7 +168,7 @@ def main():
                     commit_message=f"Release {version}",
                 )
                 print(f"[{attempt}/{max_attempts}] Cleaning remote leftovers via git...")
-                git_clean_remote(token)
+                git_clean_remote(token, version)
                 print(f"Done. Version {version} synced to ModelScope (zip mode, clean).")
                 return
             except Exception as e:
