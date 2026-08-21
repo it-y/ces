@@ -304,6 +304,7 @@ let resizeNode = null;
 let llmPaneDrag = null;
 let llmOutputDrag = null;
 let llmChatDrag = null;
+let llmChatInputDrag = null;
 let llmBlurGuard = null;
 let tempLink = null;
 let knifeActive = false;
@@ -8076,15 +8077,19 @@ function renderLLMNodePane(container, node){
 function renderLLMChatPane(container, node){
     const messages = node.messages || [];
     const chatLogStyle = applyLLMChatLogStyle(node);
+    const chatInputStyle = applyLLMChatInputStyle(node);
     container.innerHTML = `
         <div class="llm-chat-log"${chatLogStyle ? ` style="${chatLogStyle}"` : ''}>${messages.length ? messages.map((msg, mi) => `<div class="llm-bubble ${msg.role === 'user' ? 'user' : 'assistant'}" data-msg-idx="${mi}">${escapeHtml(msg.content || '')}${msg.role === 'assistant' ? `<button class="llm-bubble-copy" type="button" title="复制"><i data-lucide="copy" style="width:11px;height:11px;display:inline-block;vertical-align:middle"></i></button>` : ''}</div>`).join('') : `<div class="text-[11px] text-gray-300">${tr('canvas.startChat')}</div>`}</div>
         <div class="llm-pane-resizer" title="${tr('canvas.resizePanes')}"></div>
-        <textarea class="llm-chat-input mt-2" rows="2" placeholder="${tr('canvas.chatInput')}">${escapeHtml(node.chatInput || '')}</textarea>
+        <textarea class="llm-chat-input mt-2" rows="2"${chatInputStyle ? ` style="${chatInputStyle}"` : ''} placeholder="${tr('canvas.chatInput')}">${escapeHtml(node.chatInput || '')}</textarea>
+        <div class="llm-pane-resizer" title="${tr('canvas.resizePanes')}"></div>
         <button class="llm-run mt-2" ${node.running ? 'disabled' : ''}><i data-lucide="send" class="w-4 h-4"></i>${node.running ? tr('canvas.sending') : 'Send'}</button>
     `;
     bindScrollableText(container.querySelector('.llm-chat-log'));
     bindScrollableText(container.querySelector('.llm-chat-input'));
-    container.querySelector('.llm-pane-resizer').onmousedown = e => startLLMChatResize(e, node);
+    const resizers = container.querySelectorAll('.llm-pane-resizer');
+    resizers[0].onmousedown = e => startLLMChatResize(e, node);
+    if(resizers[1]) resizers[1].onmousedown = e => startLLMChatInputResize(e, node);
     const chatInputEl = container.querySelector('.llm-chat-input');
     chatInputEl.oninput = e => { node.chatInput = e.target.value; scheduleSave(); };
     chatInputEl.onkeydown = e => {
@@ -8284,6 +8289,41 @@ function onLLMChatResize(e){
             log.style.flex = '0 0 auto';
             log.style.maxHeight = 'none';
         }
+    }
+    scheduleSave();
+}
+function applyLLMChatInputStyle(node){
+    const h = Number(node?.llmChatInputHeight);
+    if(!Number.isFinite(h)) return '';
+    return `height:${Math.round(h)}px;`;
+}
+function startLLMChatInputResize(e, node){
+    e.preventDefault();
+    e.stopPropagation();
+    const el = nodesEl.querySelector(`.node[data-id="${node.id}"]`);
+    const input = el?.querySelector('.llm-chat-input');
+    llmChatInputDrag = {
+        node,
+        sy:e.clientY,
+        inputStart:Math.max(60, input ? input.getBoundingClientRect().height / viewport.scale : Number(node.llmChatInputHeight) || 60),
+        startNodeH:llmNodeStartHeight(node),
+        scaleAtStart:viewport.scale
+    };
+    beginLLMWindowDrag(onLLMChatInputResize);
+}
+function onLLMChatInputResize(e){
+    if(!llmChatInputDrag) return;
+    const delta = (e.clientY - llmChatInputDrag.sy) / llmChatInputDrag.scaleAtStart;
+    const nextInput = Math.max(60, Math.min(400, Math.round(llmChatInputDrag.inputStart + delta)));
+    const grow = Math.round(nextInput - llmChatInputDrag.inputStart);
+    const node = llmChatInputDrag.node;
+    node.llmChatInputHeight = nextInput;
+    node.h = Math.max(96, llmChatInputDrag.startNodeH + grow);
+    const el = nodesEl.querySelector(`.node[data-id="${node.id}"]`);
+    if(el){
+        el.style.height = `${node.h}px`;
+        const input = el.querySelector('.llm-chat-input');
+        if(input) input.style.height = `${nextInput}px`;
     }
     scheduleSave();
 }
@@ -13920,7 +13960,7 @@ function sanitizeConnections(){
     connections = (connections || []).filter(c => canConnect(c.from, c.to));
 }
 function endDrag(event=null){
-    const hadContentDrag = Boolean(dragNode || resizeNode || llmPaneDrag || llmOutputDrag || llmChatDrag || knifeChanged || tempLink);
+    const hadContentDrag = Boolean(dragNode || resizeNode || llmPaneDrag || llmOutputDrag || llmChatDrag || llmChatInputDrag || knifeChanged || tempLink);
     const hadViewportDrag = Boolean(dragBoard || minimapDrag);
     if(dragNode){
         const moved = [dragNode.node, ...(dragNode.children || []).map(c => c.node)].filter(Boolean);
@@ -13934,6 +13974,7 @@ function endDrag(event=null){
     llmPaneDrag = null;
     llmOutputDrag = null;
     llmChatDrag = null;
+    llmChatInputDrag = null;
     if(llmBlurGuard){
         window.removeEventListener('blur', llmBlurGuard);
         llmBlurGuard = null;
@@ -13941,6 +13982,7 @@ function endDrag(event=null){
     window.removeEventListener('mousemove', onLLMPaneResize, true);
     window.removeEventListener('mousemove', onLLMOutputResize, true);
     window.removeEventListener('mousemove', onLLMChatResize, true);
+    window.removeEventListener('mousemove', onLLMChatInputResize, true);
     window.removeEventListener('mouseup', endDrag, true);
     knifeActive = false;
     knifePoint = null;
