@@ -78,7 +78,8 @@ def build_release_zip(files: list[Path], version: str, out_dir: Path) -> Path:
 
 
 def git_clean_remote(token: str, keep_version: str) -> None:
-    """用 git 删除数据集里除 VERSION / 当前 update-{version}.zip / .gitattributes 外的所有文件。
+    """用 git 删除数据集里除 VERSION / 当前 update-{version}.zip 外的所有文件
+    （含 .gitattributes 等魔塔系统残留，数据集只保留更新所需的 2 个文件）。
 
     说明：ModelScope 的 SDK 同步删除（sync_remote_repo）会因仓库策略被拒（400），
     而 git 协议的删除提交是允许的。这里只删不增（当前 zip 内容不变，LFS 对象不动），
@@ -98,7 +99,7 @@ def git_clean_remote(token: str, keep_version: str) -> None:
         repo = tmp / "repo"
         subprocess.run(["git", "clone", "--depth", "1", url, str(repo)],
                        check=True, env=env)
-        keep_names = {"VERSION", ".gitattributes", f"update-{keep_version}.zip"}
+        keep_names = {"VERSION", f"update-{keep_version}.zip"}
         for entry in repo.iterdir():
             if entry.name == ".git" or entry.name in keep_names:
                 continue
