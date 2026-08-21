@@ -303,6 +303,7 @@ let zoomPreviewState = null;
 let resizeNode = null;
 let llmPaneDrag = null;
 let llmOutputDrag = null;
+let llmChatDrag = null;
 let llmBlurGuard = null;
 let tempLink = null;
 let knifeActive = false;
@@ -8074,13 +8075,16 @@ function renderLLMNodePane(container, node){
 }
 function renderLLMChatPane(container, node){
     const messages = node.messages || [];
+    const chatLogStyle = applyLLMChatLogStyle(node);
     container.innerHTML = `
-        <div class="llm-chat-log">${messages.length ? messages.map((msg, mi) => `<div class="llm-bubble ${msg.role === 'user' ? 'user' : 'assistant'}" data-msg-idx="${mi}">${escapeHtml(msg.content || '')}${msg.role === 'assistant' ? `<button class="llm-bubble-copy" type="button" title="复制"><i data-lucide="copy" style="width:11px;height:11px;display:inline-block;vertical-align:middle"></i></button>` : ''}</div>`).join('') : `<div class="text-[11px] text-gray-300">${tr('canvas.startChat')}</div>`}</div>
+        <div class="llm-chat-log"${chatLogStyle ? ` style="${chatLogStyle}"` : ''}>${messages.length ? messages.map((msg, mi) => `<div class="llm-bubble ${msg.role === 'user' ? 'user' : 'assistant'}" data-msg-idx="${mi}">${escapeHtml(msg.content || '')}${msg.role === 'assistant' ? `<button class="llm-bubble-copy" type="button" title="复制"><i data-lucide="copy" style="width:11px;height:11px;display:inline-block;vertical-align:middle"></i></button>` : ''}</div>`).join('') : `<div class="text-[11px] text-gray-300">${tr('canvas.startChat')}</div>`}</div>
+        <div class="llm-pane-resizer" title="${tr('canvas.resizePanes')}"></div>
         <textarea class="llm-chat-input mt-2" rows="2" placeholder="${tr('canvas.chatInput')}">${escapeHtml(node.chatInput || '')}</textarea>
         <button class="llm-run mt-2" ${node.running ? 'disabled' : ''}><i data-lucide="send" class="w-4 h-4"></i>${node.running ? tr('canvas.sending') : 'Send'}</button>
     `;
     bindScrollableText(container.querySelector('.llm-chat-log'));
     bindScrollableText(container.querySelector('.llm-chat-input'));
+    container.querySelector('.llm-pane-resizer').onmousedown = e => startLLMChatResize(e, node);
     const chatInputEl = container.querySelector('.llm-chat-input');
     chatInputEl.oninput = e => { node.chatInput = e.target.value; scheduleSave(); };
     chatInputEl.onkeydown = e => {
@@ -8240,6 +8244,45 @@ function onLLMOutputResize(e){
         if(outputWrap){
             outputWrap.style.height = `${node.llmOutputHeight}px`;
             outputWrap.style.flexBasis = `${node.llmOutputHeight}px`;
+        }
+    }
+    scheduleSave();
+}
+function applyLLMChatLogStyle(node){
+    const h = Number(node?.llmChatLogHeight);
+    if(!Number.isFinite(h)) return '';
+    return `height:${Math.round(h)}px;flex:0 0 auto;max-height:none;`;
+}
+function startLLMChatResize(e, node){
+    e.preventDefault();
+    e.stopPropagation();
+    const el = nodesEl.querySelector(`.node[data-id="${node.id}"]`);
+    const log = el?.querySelector('.llm-chat-log');
+    llmChatDrag = {
+        node,
+        sy:e.clientY,
+        logStart:Math.max(82, log ? log.getBoundingClientRect().height / viewport.scale : Number(node.llmChatLogHeight) || 200),
+        startNodeH:llmNodeStartHeight(node),
+        scaleAtStart:viewport.scale
+    };
+    beginLLMWindowDrag(onLLMChatResize);
+}
+function onLLMChatResize(e){
+    if(!llmChatDrag) return;
+    const delta = (e.clientY - llmChatDrag.sy) / llmChatDrag.scaleAtStart;
+    const nextLog = Math.max(82, Math.min(1200, Math.round(llmChatDrag.logStart + delta)));
+    const grow = Math.round(nextLog - llmChatDrag.logStart);
+    const node = llmChatDrag.node;
+    node.llmChatLogHeight = nextLog;
+    node.h = Math.max(96, llmChatDrag.startNodeH + grow);
+    const el = nodesEl.querySelector(`.node[data-id="${node.id}"]`);
+    if(el){
+        el.style.height = `${node.h}px`;
+        const log = el.querySelector('.llm-chat-log');
+        if(log){
+            log.style.height = `${nextLog}px`;
+            log.style.flex = '0 0 auto';
+            log.style.maxHeight = 'none';
         }
     }
     scheduleSave();
@@ -13877,7 +13920,7 @@ function sanitizeConnections(){
     connections = (connections || []).filter(c => canConnect(c.from, c.to));
 }
 function endDrag(event=null){
-    const hadContentDrag = Boolean(dragNode || resizeNode || llmPaneDrag || llmOutputDrag || knifeChanged || tempLink);
+    const hadContentDrag = Boolean(dragNode || resizeNode || llmPaneDrag || llmOutputDrag || llmChatDrag || knifeChanged || tempLink);
     const hadViewportDrag = Boolean(dragBoard || minimapDrag);
     if(dragNode){
         const moved = [dragNode.node, ...(dragNode.children || []).map(c => c.node)].filter(Boolean);
@@ -13890,12 +13933,14 @@ function endDrag(event=null){
     resizeNode = null;
     llmPaneDrag = null;
     llmOutputDrag = null;
+    llmChatDrag = null;
     if(llmBlurGuard){
         window.removeEventListener('blur', llmBlurGuard);
         llmBlurGuard = null;
     }
     window.removeEventListener('mousemove', onLLMPaneResize, true);
     window.removeEventListener('mousemove', onLLMOutputResize, true);
+    window.removeEventListener('mousemove', onLLMChatResize, true);
     window.removeEventListener('mouseup', endDrag, true);
     knifeActive = false;
     knifePoint = null;
