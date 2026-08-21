@@ -5,6 +5,9 @@ Usage: python sync_to_modelscope.py
 Before first use:
   1. Add "modelscope_token": "ms-xxx" to data/settings.json
   2. Or set env var: MODELSCOPE_TOKEN=ms-xxx
+
+固定文件名方案：zip 始终叫 update.zip，同名上传自动覆盖，数据集永远只有
+VERSION + update.zip 两个文件，无需 git 清理。
 """
 import os
 import sys
@@ -13,7 +16,6 @@ import time
 import zipfile
 import tempfile
 import shutil
-import subprocess
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.resolve()
@@ -22,6 +24,9 @@ BASE_DIR = Path(__file__).parent.resolve()
 ALLOWED_PREFIXES = {"app/", "static/", "workflows/", "VERSION"}
 
 DATASET_ID = "ytk001/ces"
+
+# 固定文件名：下载端 updater 直接拉这个文件
+ZIP_NAME = "update.zip"
 
 
 def load_token() -> str:
@@ -67,56 +72,14 @@ def collect_files() -> list[Path]:
     return sorted(set(files))
 
 
-def build_release_zip(files: list[Path], version: str, out_dir: Path) -> Path:
-    """把所有更新文件打成一个 update-{version}.zip（zip 内为相对路径，与 updater 白名单一致）。"""
-    zip_path = out_dir / f"update-{version}.zip"
+def build_release_zip(files: list[Path], out_dir: Path) -> Path:
+    """把所有更新文件打成固定名 update.zip（zip 内为相对路径，与 updater 白名单一致）。"""
+    zip_path = out_dir / ZIP_NAME
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in files:
             rel = f.relative_to(BASE_DIR).as_posix()
             zf.write(str(f), rel)
     return zip_path
-
-
-def git_clean_remote(token: str, keep_version: str) -> None:
-    """用 git 删除数据集里除 VERSION / 当前 update-{version}.zip 外的所有文件
-    （含 .gitattributes 等魔塔系统残留，数据集只保留更新所需的 2 个文件）。
-
-    说明：ModelScope 的 SDK 同步删除（sync_remote_repo）会因仓库策略被拒（400），
-    而 git 协议的删除提交是允许的。这里只删不增（当前 zip 内容不变，LFS 对象不动），
-    因此不需要安装 git-lfs。git 命令禁用 LFS filter，避免本机无 git-lfs 时 add 失败。
-    """
-    tmp = Path(tempfile.mkdtemp(prefix="ms_clean_"))
-    env = {**os.environ, "GIT_LFS_SKIP_SMUDGE": "1", "GIT_TERMINAL_PROMPT": "0"}
-    git_base = [
-        "git",
-        "-c", "filter.lfs.process=",
-        "-c", "filter.lfs.clean=",
-        "-c", "filter.lfs.smudge=",
-        "-c", "filter.lfs.required=false",
-    ]
-    try:
-        url = f"https://oauth2:{token}@www.modelscope.cn/datasets/{DATASET_ID}.git"
-        repo = tmp / "repo"
-        subprocess.run(["git", "clone", "--depth", "1", url, str(repo)],
-                       check=True, env=env)
-        keep_names = {"VERSION", f"update-{keep_version}.zip"}
-        for entry in repo.iterdir():
-            if entry.name == ".git" or entry.name in keep_names:
-                continue
-            if entry.is_dir():
-                shutil.rmtree(entry)
-            else:
-                entry.unlink()
-        subprocess.run([*git_base, "add", "-A"], cwd=repo, check=True, env=env)
-        subprocess.run(
-            [*git_base, "-c", "user.name=release", "-c", "user.email=release@local",
-             "commit", "-m", f"clean: keep only VERSION + update-{keep_version}.zip"],
-            cwd=repo, check=True, env=env,
-        )
-        subprocess.run([*git_base, "push", "origin", "HEAD"], cwd=repo, check=True, env=env)
-        print(f"Clean done. Remote keeps only VERSION + update-{keep_version}.zip.")
-    finally:
-        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def main():
@@ -145,22 +108,21 @@ def main():
     api = HubApi()
     api.login(token)
 
-    # 只上传 2 个文件：VERSION（版本探测用）+ update-{version}.zip（下载用）。
-    # 上传后自动 git 清理远端散文件（SDK 的 sync_remote_repo 删除会被魔塔策略拒绝，
-    # git 协议的删除提交则允许），数据集永远只有最新 2 个文件，不会越堆越多。
-    # 顺序是先传后删：若上传失败，旧数据原样保留，不会把数据集搞空。
+    # 只上传 2 个文件：VERSION（版本探测用）+ update.zip（下载用）。
+    # 固定文件名 → 同名自动覆盖，数据集永远只有最新 2 个文件，无需 git 清理。
+    # 上传失败时旧文件原样保留，不会把数据集搞空。
     staging = Path(tempfile.mkdtemp(prefix="ms_sync_"))
     try:
         (staging / "VERSION").write_text(version + "\n", encoding="utf-8")
-        zip_path = build_release_zip(files, version, staging)
+        zip_path = build_release_zip(files, staging)
         size_kb = zip_path.stat().st_size / 1024
-        print(f"Packed: {zip_path.name} ({size_kb:.1f} KB)")
+        print(f"Packed: {ZIP_NAME} ({size_kb:.1f} KB)")
 
-        # 整体重试：网络波动时自动重跑（上传/清理都是幂等的，重跑安全）
+        # 整体重试：网络波动时自动重跑（同名覆盖上传是幂等的，重跑安全）
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
             try:
-                print(f"[{attempt}/{max_attempts}] Uploading VERSION + zip...")
+                print(f"[{attempt}/{max_attempts}] Uploading VERSION + {ZIP_NAME}...")
                 api.upload_folder(
                     repo_id=DATASET_ID,
                     repo_type="dataset",
@@ -168,14 +130,12 @@ def main():
                     path_in_repo="",
                     commit_message=f"Release {version}",
                 )
-                print(f"[{attempt}/{max_attempts}] Cleaning remote leftovers via git...")
-                git_clean_remote(token, version)
-                print(f"Done. Version {version} synced to ModelScope (zip mode, clean).")
+                print(f"Done. Version {version} synced to ModelScope ({ZIP_NAME}).")
                 return
             except Exception as e:
                 if attempt < max_attempts:
                     wait = 5 * attempt
-                    print(f"[{attempt}/{max_attempts}] 失败: {e}，{wait}s 后重试...")
+                    print(f"[{attempt}/{max_attempts}] 上传失败: {e}，{wait}s 后重试...")
                     time.sleep(wait)
                 else:
                     print(f"[ERROR] 重试 {max_attempts} 次仍失败: {e}")

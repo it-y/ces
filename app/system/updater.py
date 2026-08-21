@@ -198,23 +198,13 @@ async def _do_download(source: str) -> Path:
 
 
 async def _download_modelscope_zip(staging: Path) -> bool:
-    """从 ModelScope 下载 update-{version}.zip 并安全解压到 staging。
+    """从 ModelScope 下载固定名 update.zip 并安全解压到 staging。
 
-    成功返回 True；zip 不存在（404）、版本读不到或网络失败返回 False（调用方回退逐文件）。
+    成功返回 True；zip 不存在（404）、网络失败返回 False（调用方回退逐文件）。
     """
     headers = _modelscope_auth_headers()
     try:
-        resp = await request_with_fallback(
-            "GET", MODELSCOPE_VERSION_URL, timeout_preset="normal",
-            follow_redirects=True, headers=headers,
-        )
-        if resp.status_code != 200:
-            return False
-        version = resp.text.strip().splitlines()[0].strip()
-        if not version:
-            return False
-
-        url = f"{MODELSCOPE_FILE_API_ROOT}update-{version}.zip"
+        url = f"{MODELSCOPE_FILE_API_ROOT}update.zip"
         resp = await request_with_fallback(
             "GET", url, timeout_preset="long",
             follow_redirects=True, headers=headers,
