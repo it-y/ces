@@ -100,7 +100,7 @@ def git_clean_remote(token: str, keep_version: str) -> None:
                        check=True, env=env)
         keep_names = {"VERSION", ".gitattributes", f"update-{keep_version}.zip"}
         for entry in repo.iterdir():
-            if entry.name in keep_names:
+            if entry.name == ".git" or entry.name in keep_names:
                 continue
             if entry.is_dir():
                 shutil.rmtree(entry)
