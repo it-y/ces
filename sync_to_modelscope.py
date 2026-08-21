@@ -13,6 +13,7 @@ import time
 import zipfile
 import tempfile
 import shutil
+import subprocess
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.resolve()
@@ -76,6 +77,42 @@ def build_release_zip(files: list[Path], version: str, out_dir: Path) -> Path:
     return zip_path
 
 
+def git_clean_remote(token: str) -> None:
+    """用 git 删除数据集里除 VERSION / update-*.zip / .gitattributes 外的所有文件。
+
+    说明：ModelScope 的 SDK 同步删除（sync_remote_repo）会因仓库策略被拒（400），
+    而 git 协议的删除提交是允许的。这里只删不增（zip 内容不变，LFS 对象不动），
+    因此不需要安装 git-lfs。
+    """
+    tmp = Path(tempfile.mkdtemp(prefix="ms_clean_"))
+    env = {**os.environ, "GIT_LFS_SKIP_SMUDGE": "1", "GIT_TERMINAL_PROMPT": "0"}
+    try:
+        url = f"https://oauth2:{token}@www.modelscope.cn/datasets/{DATASET_ID}.git"
+        repo = tmp / "repo"
+        subprocess.run(
+            ["git", "clone", "--depth", "1", url, str(repo)],
+            check=True, env=env, capture_output=True,
+        )
+        keep_names = {"VERSION", ".gitattributes"}
+        for entry in repo.iterdir():
+            if entry.name in keep_names or (entry.name.startswith("update-") and entry.name.endswith(".zip")):
+                continue
+            if entry.is_dir():
+                shutil.rmtree(entry)
+            else:
+                entry.unlink()
+        subprocess.run(["git", "add", "-A"], cwd=repo, check=True, env=env, capture_output=True)
+        subprocess.run(
+            ["git", "-c", "user.name=release", "-c", "user.email=release@local",
+             "commit", "-m", "clean: keep only VERSION + update zip"],
+            cwd=repo, check=True, env=env, capture_output=True,
+        )
+        subprocess.run(["git", "push", "origin", "HEAD"], cwd=repo, check=True, env=env, capture_output=True)
+        print("Clean done. Remote keeps only VERSION + update-*.zip.")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main():
     token = load_token()
     if not token:
@@ -103,9 +140,9 @@ def main():
     api.login(token)
 
     # 只上传 2 个文件：VERSION（版本探测用）+ update-{version}.zip（下载用）。
-    # sync_remote_repo=True：上传成功后自动删除远端本地没有的文件（散文件），
-    # 数据集永远只有最新 2 个文件，不会越堆越多。
-    # 相比"先清空再上传"更安全：上传失败时旧文件还在，不会把数据集搞空。
+    # 上传后自动 git 清理远端散文件（SDK 的 sync_remote_repo 删除会被魔塔策略拒绝，
+    # git 协议的删除提交则允许），数据集永远只有最新 2 个文件，不会越堆越多。
+    # 顺序是先传后删：若上传失败，旧数据原样保留，不会把数据集搞空。
     staging = Path(tempfile.mkdtemp(prefix="ms_sync_"))
     try:
         (staging / "VERSION").write_text(version + "\n", encoding="utf-8")
@@ -113,25 +150,26 @@ def main():
         size_kb = zip_path.stat().st_size / 1024
         print(f"Packed: {zip_path.name} ({size_kb:.1f} KB)")
 
-        # 整体重试：网络波动时自动重跑（上传是幂等的，重跑安全）
+        # 整体重试：网络波动时自动重跑（上传/清理都是幂等的，重跑安全）
         max_attempts = 3
         for attempt in range(1, max_attempts + 1):
             try:
-                print(f"[{attempt}/{max_attempts}] Uploading VERSION + zip, sync-deleting remote leftovers...")
+                print(f"[{attempt}/{max_attempts}] Uploading VERSION + zip...")
                 api.upload_folder(
                     repo_id=DATASET_ID,
                     repo_type="dataset",
                     folder_path=str(staging),
                     path_in_repo="",
                     commit_message=f"Release {version}",
-                    sync_remote_repo=True,
                 )
-                print(f"Done. Version {version} synced to ModelScope (zip mode, sync-clean).")
+                print(f"[{attempt}/{max_attempts}] Cleaning remote leftovers via git...")
+                git_clean_remote(token)
+                print(f"Done. Version {version} synced to ModelScope (zip mode, clean).")
                 return
             except Exception as e:
                 if attempt < max_attempts:
                     wait = 5 * attempt
-                    print(f"[{attempt}/{max_attempts}] 上传失败: {e}，{wait}s 后重试...")
+                    print(f"[{attempt}/{max_attempts}] 失败: {e}，{wait}s 后重试...")
                     time.sleep(wait)
                 else:
                     print(f"[ERROR] 重试 {max_attempts} 次仍失败: {e}")
