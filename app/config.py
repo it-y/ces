@@ -88,8 +88,10 @@ DEFAULT_PROJECT_ID = "default"
 AI_REQUEST_TIMEOUT = 1800.0
 IMAGE_POLL_INTERVAL = 2.0
 IMAGE_TASK_TIMEOUT = 1800.0
-# 画布图片后台任务总超时（秒）：防上游接口挂起时前端永久等待
-CANVAS_IMAGE_TASK_TIMEOUT = 300.0
+# 画布图片后台任务总超时（秒）：防上游接口挂起时前端永久等待。
+# 所有协议统一 30 分钟：同步型协议（openai/gemini）慢生成远超 5 分钟，
+# 短看门狗会砍掉上游仍在正常生成的任务（本地取消，上游照常扣费出图）。
+CANVAS_IMAGE_TASK_TIMEOUT = 1800.0
 COMFYUI_HISTORY_TIMEOUT = 1800.0
 COMFYUI_DOWNLOAD_TIMEOUT = 120.0
 APIMART_IMAGE_TASK_TIMEOUT = 1800.0

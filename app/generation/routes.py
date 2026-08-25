@@ -14,6 +14,7 @@ from .models import (
 )
 from .orchestrator import generate_image, generate_video
 from ..comfyui.scheduler import scheduler
+from ..config import CANVAS_IMAGE_TASK_TIMEOUT
 from .gateways.openai import ImageGenerationError
 router = APIRouter(prefix="/api", tags=["generation"])
 
@@ -95,9 +96,8 @@ async def _run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
             CANVAS_TASKS[task_id]["status"] = "running"
             CANVAS_TASKS[task_id]["updated_at"] = time.time()
             _save_tasks()
-    # 看门狗超时按协议区分：异步轮询型（apimart/runninghub/modelscope 等）任务
-    # 常需要排队等待，给足与轮询预算一致的时间，避免慢任务被总超时误砍。
-    timeout = await _task_timeout_for(payload.provider_id)
+    # 看门狗总超时：所有协议统一 30 分钟，防上游接口挂起时前端永久等待
+    timeout = CANVAS_IMAGE_TASK_TIMEOUT
     try:
         # 任务级看门狗：上游接口挂起（不返回响应）时，超时后标记失败，
         # 否则前端会无限等待、计时器一直累加
@@ -137,39 +137,6 @@ async def _run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
                 "updated_at": time.time(),
             })
             _save_tasks()
-
-
-async def _task_timeout_for(provider_id: str) -> float:
-    """按协议返回看门狗超时（秒）。异步轮询型给长超时，同步型给默认 300s。"""
-    try:
-        from ..system.providers import get_provider
-        from ..config import CANVAS_IMAGE_TASK_TIMEOUT, APIMART_IMAGE_TASK_TIMEOUT, IMAGE_TASK_TIMEOUT
-        if not provider_id:
-            return CANVAS_IMAGE_TASK_TIMEOUT
-        provider = _provider_cache.get(provider_id)
-        if provider is None:
-            provider = await get_provider(provider_id)
-            if provider:
-                _provider_cache[provider_id] = provider
-        if not provider:
-            return CANVAS_IMAGE_TASK_TIMEOUT
-        from ..system.providers import (
-            is_apimart_provider, is_runninghub_provider, is_modelscope_provider,
-            is_volcengine_provider, is_jimeng_provider,
-        )
-        if any(fn(provider) for fn in (
-            is_apimart_provider, is_runninghub_provider,
-            is_modelscope_provider, is_jimeng_provider,
-        )):
-            return max(CANVAS_IMAGE_TASK_TIMEOUT, APIMART_IMAGE_TASK_TIMEOUT)
-        if is_volcengine_provider(provider):
-            return max(CANVAS_IMAGE_TASK_TIMEOUT, IMAGE_TASK_TIMEOUT)
-        return CANVAS_IMAGE_TASK_TIMEOUT
-    except Exception:
-        return CANVAS_IMAGE_TASK_TIMEOUT
-
-
-_provider_cache: dict = {}
 
 
 @router.post("/online-image")
