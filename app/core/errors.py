@@ -97,10 +97,30 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # AI 错误 → 中文（保留原项目 30+ 种规则）
 # ============================================================
 
-def friendly_image_error_detail(text: str, size: str | None = None, model: str | None = None) -> str:
-    """将上游 AI 服务的英文/技术错误转为中文。覆盖 20+ 种错误模式。"""
+def friendly_image_error_detail(
+    text: str, size: str | None = None, model: str | None = None,
+    status_code: int | None = None,
+) -> str:
+    """将上游 AI 服务的英文/技术错误转为中文。覆盖 20+ 种错误模式。
+
+    status_code：调用方把 HTTP 状态码传进来（权威信号），优先按它分类；
+    文本关键词匹配只作为兜底 —— 绝不在错误文本里裸搜 "401"/"402" 这类数字，
+    避免消息里碰巧含相同数字时误报（如金额 "$4020"、任务号 "1429"）。
+    """
     raw_text = str(text or "")
     text_lower = raw_text.lower()
+
+    # ---- 先按 HTTP 状态码分类（最可靠的信号） ----
+    if status_code == 401:
+        return "API Key 无效或已过期，请在设置中更新。"
+    if status_code == 402:
+        return "API 额度不足，请充值或更换供应商后重试。"
+    if status_code == 403:
+        return "API 访问被拒绝，请检查账户权限。"
+    if status_code == 429:
+        return "请求过于频繁（触发限流），请稍等片刻后重试。"
+    if status_code == 404:
+        return f"接口或模型 {model or ''} 不存在（404），请检查模型名称是否正确、供应商是否已下线该模型。"
 
     # ---- GPT-Image-2 尺寸专属 ----
     if _is_gpt_image_2_model_name(model):
@@ -148,12 +168,14 @@ def friendly_image_error_detail(text: str, size: str | None = None, model: str |
     if "content" in text_lower and ("safety" in text_lower or "policy" in text_lower or "filter" in text_lower):
         return "内容被安全策略拦截，请修改提示词后重试。"
 
-    # ---- 鉴权 ----
-    if "401" in text_lower or "unauthorized" in text_lower or "invalid api key" in text_lower:
+    # ---- 鉴权 / 限流（文本兜底：只认单词，不认裸数字） ----
+    if "unauthorized" in text_lower or "invalid api key" in text_lower or "invalid_api_key" in text_lower:
         return "API Key 无效或已过期，请在设置中更新。"
-    if "402" in text_lower or "429" in text_lower or "rate limit" in text_lower:
+    if "rate limit" in text_lower or "too many requests" in text_lower:
         return "API 额度不足或请求过于频繁，请稍后重试。"
-    if "403" in text_lower or "forbidden" in text_lower:
+    if "insufficient" in text_lower and ("quota" in text_lower or "balance" in text_lower or "credit" in text_lower):
+        return "API 额度不足，请充值或更换供应商。"
+    if "forbidden" in text_lower:
         return "API 访问被拒绝，请检查账户权限。"
 
     # ---- 模型/渠道 ----
@@ -208,8 +230,11 @@ def _gpt_size_exceeds(size: str | None) -> bool:
     return max(w, h) > 3840 or w * h > 8_294_400
 
 
-def friendly_chat_error_detail(text: str, model: str | None = None, provider: str | None = None) -> str:
-    """聊天错误中文化，覆盖 15+ 种错误模式。"""
+def friendly_chat_error_detail(
+    text: str, model: str | None = None, provider: str | None = None,
+    status_code: int | None = None,
+) -> str:
+    """聊天错误中文化，覆盖 15+ 种错误模式。status_code 优先于文本匹配。"""
     raw_text = str(text or "")
     text_lower = raw_text.lower()
     provider_name = str(provider or "AI")
@@ -222,6 +247,16 @@ def friendly_chat_error_detail(text: str, model: str | None = None, provider: st
     error = payload.get("error") if isinstance(payload.get("error"), dict) else {}
     code = str(error.get("code") or payload.get("code") or "").lower()
     message = str(error.get("message") or payload.get("message") or "").lower()
+
+    # ---- 按 HTTP 状态码分类（权威信号） ----
+    if status_code == 401:
+        return f"{provider_name} API Key 无效或已过期，请在设置中更新。"
+    if status_code == 402:
+        return f"{provider_name} 额度不足，请充值或检查账户余额。"
+    if status_code == 403:
+        return f"{provider_name} 访问被拒绝，请检查账户权限。"
+    if status_code == 429:
+        return f"{provider_name} 请求过于频繁，请稍后重试。"
 
     # 上下文超长
     if any(kw in text_lower or kw in message for kw in (
@@ -240,12 +275,12 @@ def friendly_chat_error_detail(text: str, model: str | None = None, provider: st
     )):
         return f"{provider_name} 内容安全策略拦截了本次请求，请修改对话内容后重试。"
 
-    # 鉴权
-    if "401" in text_lower or "unauthorized" in text_lower or "invalid_api_key" in text_lower.replace(" ", "_"):
+    # 鉴权 / 限流（文本兜底：只认单词和 JSON code 字段，不认裸数字）
+    if "unauthorized" in text_lower or "invalid_api_key" in text_lower.replace(" ", "_") or code == "invalid_api_key":
         return f"{provider_name} API Key 无效或已过期，请在设置中更新。"
-    if "429" in text_lower or "rate" in text_lower:
+    if "rate limit" in text_lower or "rate_limit" in text_lower or "too many requests" in text_lower:
         return f"{provider_name} 请求过于频繁，请稍后重试。"
-    if "402" in text_lower or "quota" in text_lower or "billing" in text_lower:
+    if "quota" in text_lower or "billing" in text_lower or "insufficient_balance" in message:
         return f"{provider_name} 额度不足，请充值或检查账户余额。"
 
     # 模型

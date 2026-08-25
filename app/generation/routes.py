@@ -3,6 +3,7 @@
 """
 
 import asyncio
+import logging
 import time
 import uuid
 from fastapi import APIRouter, HTTPException
@@ -14,18 +15,19 @@ from .models import (
 )
 from .orchestrator import generate_image, generate_video
 from ..comfyui.scheduler import scheduler
-from ..config import CANVAS_IMAGE_TASK_TIMEOUT
+from ..config import CANVAS_IMAGE_TASK_TIMEOUT, DATA_DIR
 from .gateways.openai import ImageGenerationError
 router = APIRouter(prefix="/api", tags=["generation"])
+
+_log = logging.getLogger("routes")
 
 # ============================================================
 # 画布任务系统（文件持久化，服务重启不丢任务）
 # ============================================================
 import json
-import os
-from pathlib import Path
 
-_TASKS_FILE = Path("data/canvas_tasks.json")
+# 路径跟随 BASE_DIR 推导的 DATA_DIR，不依赖进程启动目录
+_TASKS_FILE = DATA_DIR / "canvas_tasks.json"
 
 CANVAS_TASKS: dict = {}
 _task_lock = asyncio.Lock()
@@ -78,8 +80,21 @@ def _save_tasks():
         tmp = _TASKS_FILE.with_suffix(".tmp")
         tmp.write_text(json.dumps(CANVAS_TASKS, ensure_ascii=True, default=str), encoding="utf-8")
         tmp.replace(_TASKS_FILE)
-    except Exception:
-        pass
+    except Exception as exc:
+        # 写盘失败不能静默：否则磁盘满/权限问题会让任务状态"凭空回退"
+        _log.warning("保存画布任务状态失败 (%s): %s", _TASKS_FILE, exc)
+
+
+# 后台任务强引用集合：防止 create_task 的任务被 GC 半路回收
+_background_tasks: set = set()
+
+
+def _spawn_background(coro):
+    """创建后台任务并持有引用，完成后自动移除。"""
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+    return task
 
 
 # 模块加载时自动恢复任务状态
@@ -88,9 +103,7 @@ _load_tasks()
 
 async def _run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
     """后台执行图片生成，完成后更新任务状态"""
-    import logging
-    log = logging.getLogger("routes")
-    log.info("_run_canvas_image_task canvas_id=%s", payload.canvas_id)
+    _log.info("_run_canvas_image_task canvas_id=%s", payload.canvas_id)
     async with _task_lock:
         if task_id in CANVAS_TASKS:
             CANVAS_TASKS[task_id]["status"] = "running"
@@ -120,7 +133,7 @@ async def _run_canvas_image_task(task_id: str, payload: OnlineImageRequest):
             _save_tasks()
     except asyncio.TimeoutError:
         detail = f"图片生成超时（{int(timeout)} 秒内未完成）。可能是上游接口无响应，请重试；若持续失败请更换模型或供应商。"
-        log.warning("canvas image task %s timed out", task_id)
+        _log.warning("canvas image task %s timed out", task_id)
         async with _task_lock:
             CANVAS_TASKS[task_id].update({
                 "status": "failed",
@@ -166,7 +179,9 @@ async def api_create_canvas_image_task(req: OnlineImageRequest):
     req.canvas_id = resolve_canvas_id(req.canvas_id, req.client_id)
     logging.getLogger("routes").info("canvas-image-tasks body: prompt=%s canvas_id=%s", req.prompt[:50], req.canvas_id)
     task_id = f"canvas_img_{uuid.uuid4().hex}"
+    # 顺手清理过期任务（7 天 TTL），避免长期运行时任务文件无限膨胀
     async with _task_lock:
+        _cleanup_old_tasks()
         CANVAS_TASKS[task_id] = {
             "id": task_id,
             "type": "online-image",
@@ -179,7 +194,7 @@ async def api_create_canvas_image_task(req: OnlineImageRequest):
             "model": req.model,
         }
         _save_tasks()
-    asyncio.create_task(_run_canvas_image_task(task_id, req))
+    _spawn_background(_run_canvas_image_task(task_id, req))
     return {"task_id": task_id, "status": "queued"}
 
 
@@ -454,7 +469,7 @@ async def api_canvas_llm_stream(req: CanvasLLMRequest):
                         body = await response.aread()
                         text = body.decode("utf-8", errors="ignore")
                         from ..core.errors import friendly_chat_error_detail
-                        friendly = friendly_chat_error_detail(text, model, req.provider)
+                        friendly = friendly_chat_error_detail(text, model, req.provider, status_code=response.status_code)
                         yield _sse_event({"type": "error", "detail": friendly or f"上游接口错误：{text[:300]}"})
                         return
                     async for line in response.aiter_lines():
@@ -589,7 +604,7 @@ async def api_create_canvas_comfy_task(req: ComfyGenerateRequest):
             "workflow_json": req.workflow_json,
         }
         _save_tasks()
-    asyncio.create_task(_run_canvas_comfy_task(task_id, req))
+    _spawn_background(_run_canvas_comfy_task(task_id, req))
     return {"task_id": task_id, "status": "queued"}
 
 

@@ -2,7 +2,39 @@
 图片/视频生成网关接口（轻量 Protocol，不继承 ABC）。
 """
 
-from typing import Protocol
+from pathlib import Path
+from typing import Optional, Protocol
+
+from ...config import UPLOAD_DIR, OUTPUT_DIR, CANVAS_FILES_DIR
+
+
+def resolve_local_media_path(url: str) -> Optional[Path]:
+    """把本地媒体 URL（/assets/xx、/output/xx、/cfiles/xx）解析为文件系统路径。
+
+    带 include 检查：解析后的真实路径必须仍位于对应资源根目录内，
+    防 `/assets/../xxx` 这类穿越读取任意本地文件后外传给第三方 API。
+    不匹配或越界返回 None。
+    """
+    if not url or not url.startswith("/"):
+        return None
+    clean = url.split("?", 1)[0]
+    roots = {
+        "/cfiles/": CANVAS_FILES_DIR,
+        "/assets/": UPLOAD_DIR,
+        "/output/": OUTPUT_DIR,
+    }
+    for prefix, root in roots.items():
+        if clean.startswith(prefix):
+            rel = clean[len(prefix):].lstrip("/")
+            if not rel:
+                return None
+            path = Path(root) / rel
+            try:
+                path.resolve().relative_to(Path(root).resolve())
+            except ValueError:
+                return None
+            return path
+    return None
 
 
 class ImageGateway(Protocol):

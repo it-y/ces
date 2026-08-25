@@ -17,7 +17,7 @@ from pathlib import Path
 
 from ...core.http_client import create_client, retry_request
 from ...core.errors import friendly_image_error_detail
-from ...config import UPLOAD_DIR, OUTPUT_DIR, CANVAS_FILES_DIR
+from .base import resolve_local_media_path
 from .size_utils import apimart_size_resolution, unwrap_apimart_response
 from ..task_poller import extract_task_id, poll_image_task
 
@@ -134,7 +134,7 @@ class OpenAIGateway:
             resp = await client.post(submit_url, json=body, headers=headers, timeout=1800)
             if resp.status_code not in (200, 201):
                 from ...core.errors import friendly_image_error_detail
-                msg = friendly_image_error_detail(resp.text, model=model)
+                msg = friendly_image_error_detail(resp.text, model=model, status_code=resp.status_code)
                 raise ImageGenerationError(msg or f"视频提交失败：{resp.text[:300]}", resp.status_code)
 
             raw = resp.json()
@@ -169,10 +169,17 @@ class OpenAIGateway:
 
         # 成功状态码：返回 body（可能带图片 URL 或异步 task_id）
         if resp.status_code in (200, 201, 202):
-            return resp.json()
+            try:
+                return resp.json()
+            except ValueError:
+                # 200 但响应体不是 JSON（网关错误页等）——不能当成功返回
+                raise ImageGenerationError(
+                    f"上游返回了无法解析的响应（HTTP {resp.status_code}）：{resp.text[:200]}",
+                    502,
+                )
 
         # 其它状态码一律报错
-        msg = friendly_image_error_detail(resp.text)
+        msg = friendly_image_error_detail(resp.text, status_code=resp.status_code)
         raise ImageGenerationError(msg, resp.status_code)
 
     # ---- 简单生成（无参考图） ----
@@ -426,7 +433,17 @@ class OpenAIGateway:
 
         task_id = extract_task_id(data)
         if not task_id:
-            return []
+            # 上游 200 但既没有图片也没有异步任务号：多半是内容被安全系统
+            # 静默拦截或模型无输出。必须报错而不是当成功 —— 否则钱花了、
+            # 任务标 succeeded、用户却什么都看不到。
+            try:
+                snippet = json.dumps(data, ensure_ascii=False)[:200]
+            except Exception:
+                snippet = str(data)[:200]
+            raise ImageGenerationError(
+                f"上游返回成功但没有图片数据（可能被内容安全拦截或模型无输出）。响应片段：{snippet}",
+                502,
+            )
 
         polled = await poll_image_task(task_id, self.provider)
         return self._parse_image_urls(polled)
@@ -515,15 +532,8 @@ class OpenAIGateway:
         return headers
 
     def _local_path_from_url(self, url: str) -> Optional[Path]:
-        """将本地 URL（/assets/xxx, /output/xxx, /cfiles/xxx）转为文件系统路径"""
-        from pathlib import Path as _Path
-        path_part = url.split("?")[0]
-        if path_part.startswith("/assets/"):
-            return _Path(UPLOAD_DIR) / path_part[len("/assets/"):]
-        if path_part.startswith("/output/"):
-            return _Path(OUTPUT_DIR) / path_part[len("/output/"):]
-        if path_part.startswith("/cfiles/"):
-            return _Path(CANVAS_FILES_DIR) / path_part[len("/cfiles/"):]
+        """将本地 URL（/assets/xxx, /output/xxx, /cfiles/xxx）转为文件系统路径（含越界检查）"""
+        return resolve_local_media_path(url)
 
     async def _fetch_image_bytes(self, url: str) -> Optional[bytes]:
         """下载远程图片或从本地文件读取"""

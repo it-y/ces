@@ -10369,12 +10369,25 @@ async function runGenerator(genId, opts={}){
     let pendingIds = [];
     const startedAt = nowMs();
     if(!opts.cascade){
+        // running 标志只作 2 秒的按钮防抖视觉反馈，不是运行状态锁：
+        // 到期后允许再次点击、并行多批（有意保留的行为，勿当 bug 改）
         gen.running = true;
         refreshRunNodes(gen, out);
         setTimeout(() => { gen.running = false; refreshRunNodes(gen, out); }, 2000);
     }
     try {
-        const taskInfos = await Promise.all(Array.from({length:count}, () => createCanvasImageTask(payload, {cascadeTargetId})));
+        // 逐个收集创建结果：任一失败不能丢掉已成功创建的任务（否则那些任务
+        // 在后端照常运行计费，前端却拿不到 task_id，图没人认领）
+        const settled = await Promise.allSettled(Array.from({length:count}, () => createCanvasImageTask(payload, {cascadeTargetId})));
+        const taskInfos = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
+        if(!taskInfos.length){
+            const firstErr = settled.find(s => s.status === 'rejected');
+            throw (firstErr && firstErr.reason) || new Error(tr('canvas.generationFailed'));
+        }
+        if(taskInfos.length < count){
+            const reason = settled.find(s => s.status === 'rejected');
+            setStatus(`成功创建 ${taskInfos.length}/${count} 个生成任务${reason?.reason?.message ? '：' + reason.reason.message : ''}`);
+        }
         if(!out){
             let outputs = [];
             for(const task of taskInfos){
@@ -12351,6 +12364,12 @@ async function pollCanvasImageTask(taskId, options={}){
                 failCanvasImageTask(taskId, data.error || tr('canvas.generationFailed'), data);
                 return 'failed';
             }
+            if(data.status === 'interrupted'){
+                // 后端重启把 queued/running 标为 interrupted：必须终结轮询，
+                // 否则前端会以 1.8s 间隔无限空转
+                failCanvasImageTask(taskId, '后端服务重启，任务已中断，请重新生成', data);
+                return 'failed';
+            }
             await sleep(1800);
         }
     } catch(err) {
@@ -12375,6 +12394,7 @@ async function waitCanvasImageTaskResult(taskId, options={}){
         const data = await res.json();
         if(data.status === 'succeeded') return data.result || {};
         if(data.status === 'failed') throw new Error(data.error || tr('canvas.generationFailed'));
+        if(data.status === 'interrupted') throw new Error('后端服务重启，任务已中断，请重新生成');
         await sleep(1800);
     }
 }

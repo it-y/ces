@@ -30,6 +30,8 @@ class ComfyUIScheduler:
         self.instances = self._normalize_instances(configured)
         self._load_lock = asyncio.Lock()
         self._load: dict[str, int] = {address: 0 for address in self.instances}
+        # 后台看护任务强引用：防止 create_task 的任务被 GC 半路回收导致预留计数不释放
+        self._watchers: set = set()
 
     @staticmethod
     def _normalize_instances(instances: list[str]) -> list[str]:
@@ -155,7 +157,9 @@ class ComfyUIScheduler:
             await self.release_backend(address)
             raise
 
-        asyncio.create_task(self._watch_and_release(address, prompt_id))
+        watcher = asyncio.create_task(self._watch_and_release(address, prompt_id))
+        self._watchers.add(watcher)
+        watcher.add_done_callback(self._watchers.discard)
         return prompt_id
 
     async def _watch_and_release(self, address: str, prompt_id: str) -> None:

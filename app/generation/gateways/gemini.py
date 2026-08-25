@@ -5,6 +5,7 @@ Gemini 网关 — 图片生成（multipart + URL 拼接）。
 import base64
 from ...core.http_client import create_client, retry_request
 from ...core.errors import friendly_image_error_detail
+from .base import resolve_local_media_path
 from .openai import ImageGenerationError
 
 
@@ -131,7 +132,7 @@ class GeminiGateway:
 
         # Gemini 图片为同步返回（candidates 内嵌 base64），只接受 200/201/202
         if resp.status_code >= 300:
-            raise ImageGenerationError(friendly_image_error_detail(resp.text, size, model), resp.status_code)
+            raise ImageGenerationError(friendly_image_error_detail(resp.text, size, model, status_code=resp.status_code), resp.status_code)
 
         return self._parse_image_urls(resp.json())
 
@@ -156,18 +157,11 @@ class GeminiGateway:
                 return base64.b64decode(encoded)
             except Exception:
                 return None
-        # 本地路径（/assets/, /output/, /cfiles/）
+        # 本地路径（/assets/, /output/, /cfiles/），带越界检查
         if url.startswith("/"):
-            from pathlib import Path
-            from ...config import UPLOAD_DIR, OUTPUT_DIR, CANVAS_FILES_DIR
-            path_part = url.split("?")[0].lstrip("/")
-            for root in (CANVAS_FILES_DIR, UPLOAD_DIR, OUTPUT_DIR):
-                try:
-                    local = Path(root) / path_part.split("/", 1)[-1] if "/" in path_part else Path(root) / path_part
-                    if local.exists():
-                        return local.read_bytes()
-                except Exception:
-                    continue
+            local = resolve_local_media_path(url)
+            if local and local.exists():
+                return local.read_bytes()
             return None
         try:
             async with create_client("normal") as client:

@@ -121,9 +121,14 @@ async def request_with_fallback(
     流程：
       1. 查策略缓存，命中则直接用缓存策略
       2. 未命中 → 直连尝试（最多 2 次）
-      3. 直连全失败（连接错误/超时/5xx）→ 切换代理尝试（最多 2 次）
+      3. 直连失败且可安全重发（连接阶段错误）→ 切换代理尝试（最多 2 次）
       4. 全失败 → 抛出最后一个异常
       5. 成功 → 缓存策略，5 分钟后过期
+
+    防重复计费规则（提交类 POST 等）：
+      - 读超时 / 读写错误：请求可能已被上游受理，不重试、不切代理，直接抛出
+      - 服务端已返回 5xx：路由是通的，不再切代理
+      - 仅连接阶段错误（ConnectError/ConnectTimeout/PoolTimeout）才允许重发
 
     429 限流：读 Retry-After 头等待后重试一次，仍 429 则返回响应（上层转中文提示）。
     其余 4xx 不重试（业务错误，重试没用）。
@@ -146,14 +151,18 @@ async def request_with_fallback(
             if resp.status_code < 600:
                 # 5xx：缓存策略失效，走完整探测（重试直连+代理），行为与未命中一致
                 _strategy_cache.pop(host, None)
-        except Exception:
-            _strategy_cache.pop(host, None)  # 缓存失效，重新探测
+        except Exception as e:
+            _strategy_cache.pop(host, None)  # 缓存失效
+            if not _is_transient_error(e, method):
+                # 读超时/读写错误：请求可能已送达并开始计费，绝不重发
+                raise
             # fall through 到完整探测
 
     last_error = None
 
     # —— 阶段 1：直连 ——
     direct = _get_direct_client(timeout_preset)
+    may_fallback = True  # 阶段 1 失败后是否允许再次发起请求（切代理）
     for attempt in range(min(max_retries, 2)):
         try:
             resp = await direct.request(method, url, **kwargs)
@@ -165,51 +174,56 @@ async def request_with_fallback(
                 _cache_strategy(host, "direct")
                 return resp
             if 500 <= resp.status_code < 600:
-                # 5xx：可能是临时故障，重试一次；仍 5xx 则不再直连，跳代理
+                # 5xx：可能是临时故障，重试一次；仍 5xx 则结束。
+                # 服务端已应答说明路由是通的，换代理打同一个上游没有意义。
                 if attempt < 1:
                     await asyncio.sleep(2 ** attempt)
                     continue
                 last_error = Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
+                may_fallback = False
                 break
             # 2xx/3xx：成功
             _cache_strategy(host, "direct")
             return resp
         except Exception as e:
             last_error = e
-            if _is_transient_error(e) and attempt < 1:
+            if _is_transient_error(e, method) and attempt < 1:
                 await asyncio.sleep(2 ** attempt)
                 continue
-            # 连接错误 → 不再重试直连，直接跳到代理
+            # 仅连接阶段失败（请求未送达）才允许切代理重发；
+            # 读超时等情况直接抛出，防止提交类请求重复计费。
+            may_fallback = _is_transient_error(e, method)
             break
 
-    # —— 阶段 2：代理兜底 ——
-    proxy = _get_proxy_client(timeout_preset)
-    for attempt in range(min(max_retries, 2)):
-        try:
-            resp = await proxy.request(method, url, **kwargs)
-            if resp.status_code == 429:
-                resp = await _retry_after_429(proxy, method, url, kwargs, resp)
+    # —— 阶段 2：代理兜底（仅在安全可重发时进入） ——
+    if may_fallback:
+        proxy = _get_proxy_client(timeout_preset)
+        for attempt in range(min(max_retries, 2)):
+            try:
+                resp = await proxy.request(method, url, **kwargs)
+                if resp.status_code == 429:
+                    resp = await _retry_after_429(proxy, method, url, kwargs, resp)
+                    _cache_strategy(host, "proxy")
+                    return resp
+                if 400 <= resp.status_code < 500:
+                    _cache_strategy(host, "proxy")
+                    return resp
+                if 500 <= resp.status_code < 600:
+                    # 5xx：可能是临时故障，重试一次；仍 5xx 作为最终失败
+                    if attempt < 1:
+                        await asyncio.sleep(2 ** attempt)
+                        continue
+                    last_error = Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
+                    break
+                # 2xx/3xx：成功
                 _cache_strategy(host, "proxy")
                 return resp
-            if 400 <= resp.status_code < 500:
-                _cache_strategy(host, "proxy")
-                return resp
-            if 500 <= resp.status_code < 600:
-                # 5xx：可能是临时故障，重试一次；仍 5xx 作为最终失败
-                if attempt < 1:
+            except Exception as e:
+                last_error = e
+                if _is_transient_error(e, method) and attempt < 1:
                     await asyncio.sleep(2 ** attempt)
                     continue
-                last_error = Exception(f"HTTP {resp.status_code}: {resp.text[:200]}")
                 break
-            # 2xx/3xx：成功
-            _cache_strategy(host, "proxy")
-            return resp
-        except Exception as e:
-            last_error = e
-            if _is_transient_error(e) and attempt < 1:
-                await asyncio.sleep(2 ** attempt)
-                continue
-            break
 
     raise last_error or Exception(f"请求失败（已尝试直连+代理）: {url}")
 
@@ -234,16 +248,30 @@ async def _retry_after_429(client, method: str, url: str, kwargs: dict, resp):
         return resp
 
 
-def _is_transient_error(e: Exception) -> bool:
-    """判断是否为瞬时错误（值得重试）"""
+def _is_transient_error(e: Exception, method: str = "") -> bool:
+    """判断是否为「可安全重试」的瞬时错误。
+
+    关键区分（防重复计费）：
+    - 连接阶段失败（ConnectError / ConnectTimeout / PoolTimeout）：请求根本没有
+      送达上游，重试不会产生重复任务 —— 可重试，也可切换代理兜底。
+    - 读超时 / 读写错误（ReadTimeout / ReadError / WriteTimeout 等）：请求已经
+      送达、上游可能已受理并开始计费，再次发送就是重复下单 —— 对提交类 POST
+      一律不重试、不切代理。
+    GET 等幂等方法不受此限制，任何网络层瞬态错误都可重试。
+
+    method 为空时按最严格策略处理（仅连接阶段错误可重试）。
+    """
+    idempotent = method.upper() in ("GET", "HEAD", "OPTIONS")
+    if isinstance(e, httpx.TransportError):
+        if idempotent:
+            return True
+        return isinstance(e, (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout))
+    # 非 httpx 异常兜底：只认明确表示「未连上」的消息
     msg = str(e).lower()
-    if any(kw in msg for kw in ("timeout", "connection", "reset", "refused", "dns", "eof", "broken pipe")):
-        return True
-    # httpx 的连接相关异常
-    cls_name = type(e).__name__.lower()
-    if any(kw in cls_name for kw in ("timeout", "connect", "read", "write", "network", "remote", "proxy", "pool")):
-        return True
-    return False
+    return any(kw in msg for kw in (
+        "connection refused", "failed to resolve", "name or service not known",
+        "temporary failure in name resolution",
+    ))
 
 
 async def retry_request(method: str, url: str, **kwargs):

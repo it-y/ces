@@ -6,20 +6,24 @@
 
 import asyncio
 import json
-import os
 import time
 from typing import Optional
 
 from ..core.http_client import request_with_fallback
 
 # ---- 超时 & 间隔 ----
+# 唯一来源是 app/config.py，这里不再本地定义，避免两套数值漂移
+# （历史上本地默认 600s 曾把非 apimart 异步任务在 10 分钟就判死，
+#   而外层看门狗允许 30 分钟）。如需环境变量覆盖请改在 config.py 统一实现。
 
-AI_REQUEST_TIMEOUT = float(os.getenv("AI_REQUEST_TIMEOUT", "600"))
-IMAGE_POLL_INTERVAL = float(os.getenv("IMAGE_POLL_INTERVAL", "2"))
-IMAGE_TASK_TIMEOUT = float(os.getenv("IMAGE_TASK_TIMEOUT", str(AI_REQUEST_TIMEOUT)))
-APIMART_IMAGE_TASK_TIMEOUT = float(os.getenv("APIMART_IMAGE_TASK_TIMEOUT", "1800"))
-APIMART_IMAGE_POLL_INTERVAL = float(os.getenv("APIMART_IMAGE_POLL_INTERVAL", "5"))
-APIMART_IMAGE_INITIAL_POLL_DELAY = float(os.getenv("APIMART_IMAGE_INITIAL_POLL_DELAY", "10"))
+from ..config import (
+    AI_REQUEST_TIMEOUT,
+    IMAGE_POLL_INTERVAL,
+    IMAGE_TASK_TIMEOUT,
+    APIMART_IMAGE_TASK_TIMEOUT,
+    APIMART_IMAGE_POLL_INTERVAL,
+    APIMART_IMAGE_INITIAL_POLL_DELAY,
+)
 
 IMAGE_TASK_SUCCESS_STATUSES = {
     "SUCCESS", "SUCCESSFUL", "SUCCEED", "SUCCEEDED",
@@ -150,7 +154,12 @@ async def poll_image_task(task_id: str, provider: dict) -> dict:
             await asyncio.sleep(min(interval, max(0.0, deadline - time.monotonic())))
             continue
 
-        last_payload = resp.json()
+        try:
+            last_payload = resp.json()
+        except ValueError:
+            # 200 但响应体不是 JSON（网关错误页等）：当成本轮查询失败，等下一轮
+            await asyncio.sleep(min(interval, max(0.0, deadline - time.monotonic())))
+            continue
 
         # 检查状态
         status = image_task_status(last_payload)

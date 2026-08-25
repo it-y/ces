@@ -64,7 +64,7 @@ class ModelScopeGateway:
 
         # 非 200 一律报错 —— 避免错误响应里的 task_id 被误判成异步任务、
         # 把鉴权/限流错误错报成「轮询超时」
-        raise ImageGenerationError(friendly_image_error_detail(resp.text, size, model), resp.status_code)
+        raise ImageGenerationError(friendly_image_error_detail(resp.text, size, model, status_code=resp.status_code), resp.status_code)
 
     def _submit_headers(self) -> dict:
         """提交请求头（含 Async-Mode）"""

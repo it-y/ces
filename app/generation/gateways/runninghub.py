@@ -18,6 +18,7 @@ import time
 import uuid
 from ...core.http_client import create_client, retry_request
 from .openai import ImageGenerationError
+from .base import resolve_local_media_path
 from ...config import (
     RUNNINGHUB_OPENAPI_BASE_URL, IMAGE_TASK_TIMEOUT, IMAGE_POLL_INTERVAL,
 )
@@ -141,16 +142,9 @@ class RunningHubGateway:
             except Exception:
                 return None
         if url.startswith("/"):
-            from pathlib import Path
-            from ...config import UPLOAD_DIR, OUTPUT_DIR, CANVAS_FILES_DIR
-            path_part = url.split("?")[0]
-            for root in (CANVAS_FILES_DIR, UPLOAD_DIR, OUTPUT_DIR):
-                local = Path(root) / path_part.lstrip("/").split("/", 1)[-1] if "/" in path_part.lstrip("/") else Path(root) / path_part.lstrip("/")
-                try:
-                    if local.exists():
-                        return local.read_bytes()
-                except Exception:
-                    continue
+            local = resolve_local_media_path(url)
+            if local and local.exists():
+                return local.read_bytes()
             return None
         try:
             async with create_client("normal") as client:

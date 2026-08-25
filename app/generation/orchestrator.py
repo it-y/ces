@@ -14,7 +14,7 @@ from ..system.providers import (
 from ..core.websocket import manager as ws_manager
 from ..canvas.manager import load_canvas, save_canvas, canvas_output_dir, CanvasConflictError
 from ..config import CANVAS_FILES_DIR, OUTPUT_DIR, HISTORY_PATH, HISTORY_MAX_ENTRIES, ONLINE_IMAGE_REFERENCE_MAX
-from .gateways.openai import OpenAIGateway
+from .gateways.openai import OpenAIGateway, ImageGenerationError
 from .gateways.gemini import GeminiGateway
 from .gateways.volcengine import VolcengineGateway
 from .gateways.modelscope import ModelScopeGateway
@@ -54,6 +54,13 @@ async def generate_image(
 
     # 协议分发
     urls = await _dispatch(provider, proto, prompt, size, model, quality, n, safe_refs)
+
+    # 兜底：网关返回空结果一律按失败处理，绝不让"没钱没图"的任务标成成功
+    if not urls:
+        raise ImageGenerationError(
+            "上游未返回图片（可能被内容安全拦截或模型无输出），本次生成已终止。",
+            502,
+        )
 
     # 下载到本地（失败用原 URL）
     local_urls = [await _download_or_keep(url, canvas_id) for url in urls]

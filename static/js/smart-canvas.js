@@ -14206,11 +14206,22 @@ async function runApiGeneration(prompt, refs, runSettings=settings){
     if(!runSettings.provider_id || !runSettings.model) throw new Error(tr('smart.errNoApiModel'));
     const count = Math.max(1, Math.min(8, Number(runSettings.count || 1)));
     const payload = {prompt, provider_id:runSettings.provider_id, model:runSettings.model, size:sizeForRun(runSettings), quality:runSettings.quality || 'auto', n:1, reference_images:imageRefsOnly(refs).slice(0, SMART_REFERENCE_IMAGE_MAX), canvas_id: canvas?.id || ''};
-    const tasks = await Promise.all(Array.from({length:count}, () => fetch('/api/canvas-image-tasks', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}).then(async r => {
+    // allSettled 收集：任一创建失败不能丢掉已成功创建的任务（否则后端照常
+    // 运行计费，前端却拿不到 task_id，图没人认领）。全部失败才向上抛错。
+    const settled = await Promise.allSettled(Array.from({length:count}, () => fetch('/api/canvas-image-tasks', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)}).then(async r => {
         if(!r.ok) throw new Error(await r.text());
         return r.json();
     })));
-    return {taskIds:tasks.map(task => task.task_id).filter(Boolean), count, providerId:payload.provider_id, model:payload.model};
+    const okTasks = settled.filter(s => s.status === 'fulfilled').map(s => s.value);
+    if(!okTasks.length){
+        const firstErr = settled.find(s => s.status === 'rejected');
+        throw (firstErr && firstErr.reason) || new Error(tr('smart.errRunFailed'));
+    }
+    const taskIds = okTasks.map(task => task.task_id).filter(Boolean);
+    if(taskIds.length < count){
+        console.warn(`[smart-canvas] 仅成功创建 ${taskIds.length}/${count} 个生成任务`, settled.find(s => s.status === 'rejected')?.reason);
+    }
+    return {taskIds, count:taskIds.length, providerId:payload.provider_id, model:payload.model};
 }
 async function runRunningHubGeneration(prompt, refs, runSettings=settings){
     const ref = selectedRunningHubRef(runSettings);
@@ -14707,6 +14718,7 @@ async function pollSmartCanvasTask(taskId){
             });
             if(task.status === 'succeeded') return task.result || {};
             if(task.status === 'jimeng_pending') throw new JimengPendingSignal({submitId:task.submit_id, kind:task.kind, queueInfo:task.queue_info, message:task.message});
+            if(task.status === 'interrupted') throw new Error('后端服务重启，任务已中断，请重新生成');
             if(task.status === 'failed'){
                 const recoverTaskId = task.upstream_task_id || extractUpstreamTaskId(task.error || '');
                 if(recoverTaskId) throw new ImageTaskRecoverSignal({taskId, recoverTaskId, providerId:task.provider_id, kind:'image', message:task.error || tr('smart.errRunFailed')});

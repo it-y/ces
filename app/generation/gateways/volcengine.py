@@ -163,7 +163,7 @@ class VolcengineGateway:
 
         # 火山 Seedream 图片为同步返回 url，只接受 200/201/202
         if resp.status_code >= 300:
-            raise ImageGenerationError(friendly_image_error_detail(resp.text, size, model), resp.status_code)
+            raise ImageGenerationError(friendly_image_error_detail(resp.text, size, model, status_code=resp.status_code), resp.status_code)
 
         data = resp.json()
         urls = []
@@ -244,7 +244,7 @@ class VolcengineGateway:
         # 提交任务
         resp = await retry_request("POST", submit_url, content=body_str, headers=headers)
         if resp.status_code not in (200, 201):
-            raise ImageGenerationError(friendly_image_error_detail(resp.text, model=model), resp.status_code)
+            raise ImageGenerationError(friendly_image_error_detail(resp.text, model=model, status_code=resp.status_code), resp.status_code)
 
         data = resp.json()
         task_id = data.get("id") or data.get("task_id", "")

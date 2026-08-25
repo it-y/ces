@@ -34,28 +34,34 @@ async def api_list_providers():
 
 
 @router.put("/providers")
-async def api_update_providers(payload: list[dict]):
-    """批量更新供应商配置"""
+async def api_update_providers(payload: list[ApiProviderPayload]):
+    """批量更新供应商配置（带 schema 校验；clear_* 控制标志不落盘）"""
     providers = await load_providers()
     existing_ids = {p["id"] for p in providers}
-    for item in payload:
+    for item_model in payload:
+        # 只持久化业务字段：exclude_unset 保留"前端发了什么就存什么"的原语义，
+        # 控制标志单独从模型对象上读，绝不写进存储文件
+        item = item_model.model_dump(exclude_unset=True, exclude=CLEAR_FLAG_FIELDS)
         pid = item.get("id", "")
         if pid in existing_ids:
             for p in providers:
                 if p["id"] == pid:
                     p.update({k: v for k, v in item.items() if v is not None})
                     # 处理清除密钥标记
-                    if item.get("clear_key"):
+                    if item_model.clear_key:
                         p.pop("api_key", None)
-                    if item.get("clear_wallet_key"):
+                    if item_model.clear_wallet_key:
                         p.pop("wallet_api_key", None)
-                    if item.get("clear_volcengine_access_key"):
+                    # 火山 AK/SK：兼容前后端两套历史命名（此前字段名对不上，
+                    # 点清除提示成功但密钥静默残留）
+                    if item_model.clear_volcengine_access_key or item_model.clear_volcengine_access_key_id:
                         p.pop("volcengine_access_key_id", None)
-                    if item.get("clear_volcengine_secret_key"):
+                    if item_model.clear_volcengine_secret_key or item_model.clear_volcengine_secret_access_key:
                         p.pop("volcengine_secret_access_key", None)
                     break
         else:
-            providers.append(item)
+            # 新增：补全默认值形成完整记录
+            providers.append(item_model.model_dump(exclude=CLEAR_FLAG_FIELDS))
             existing_ids.add(pid)
     await save_providers(providers)
     # 重新加载以获取完整数据（含脱敏处理）
@@ -449,7 +455,7 @@ async def api_config_token():
 
 @router.get("/settings/github-token")
 async def api_get_github_token():
-    """返回 GitHub Token 是否存在"""
+    """返回 GitHub Token 是否存在（只给掩码，绝不明文回传）"""
     from ..config import SETTINGS_PATH
     token = ""
     try:
@@ -458,7 +464,7 @@ async def api_get_github_token():
             token = data.get("github_token", "")
     except Exception:
         pass
-    return {"has_token": bool(token), "token": token}
+    return {"has_token": bool(token), "token_preview": mask_secret(token)}
 
 
 @router.post("/settings/github-token")
