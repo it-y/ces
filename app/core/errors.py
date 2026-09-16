@@ -301,6 +301,24 @@ def friendly_chat_error_detail(
 # 注册
 # ============================================================
 
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """兜底 500：任何未捕获异常都返回 JSON，绝不让前端拿到纯文本 "Internal Server Error"。
+
+    纯文本响应体（以 I 开头）会让前端的 res.json() 抛出
+    SyntaxError: Unexpected token 'I', "Internal S"... is not valid JSON，
+    真实错误被掩盖成一句看不懂的解析错误。
+    """
+    import traceback
+    traceback.print_exc()
+    print(f"[500] {request.method} {request.url.path} → {type(exc).__name__}: {exc}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"服务器内部错误：{type(exc).__name__}: {exc}"},
+    )
+
+
 def register_error_handlers(app):
     """注册全局异常处理器"""
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    # Starlette 的 ServerErrorMiddleware 仍会把异常重新抛出，uvicorn 照常打印完整堆栈
+    app.add_exception_handler(Exception, unhandled_exception_handler)

@@ -2697,7 +2697,7 @@ async function probeAsync(){
                     image_request_mode:'openai'
                 })
             }).then(async r => {
-                if(!r.ok) throw new Error((await r.json()).detail || '请求失败');
+                if(!r.ok) throw new Error(await readErrorDetail(r, '请求失败'));
                 return r.json();
             });
             applyDetectedProtocol('runninghub');
@@ -2723,7 +2723,7 @@ async function probeAsync(){
                 image_request_mode: imageRequestModeInput?.value || item.image_request_mode || 'openai'
             })
         }).then(async r => {
-            if(!r.ok) throw new Error((await r.json()).detail || '请求失败');
+            if(!r.ok) throw new Error(await readErrorDetail(r, '请求失败'));
             return r.json();
         });
         const detectedProtocol = String(data.protocol || '').toLowerCase();
@@ -2787,7 +2787,7 @@ async function testConnection(){
                 image_request_mode: imageRequestModeInput?.value || item.image_request_mode || 'openai'
             })
         }).then(async r => {
-            if(!r.ok) throw new Error((await r.json()).detail || (tr('api.urlInvalid') || '验证失败'));
+            if(!r.ok) throw new Error(await readErrorDetail(r, tr('api.urlInvalid') || '验证失败'));
             return r.json();
         });
         if(data.ok){
@@ -2863,7 +2863,7 @@ async function fetchModels(){
                 full: document.getElementById('fullFetchToggle')?.checked || false
             })
         }).then(async r => {
-            if(!r.ok) throw new Error((await r.json()).detail || (tr('api.urlInvalid') || '拉取失败'));
+            if(!r.ok) throw new Error(await readErrorDetail(r, tr('api.urlInvalid') || '拉取失败'));
             return r.json();
         });
         lastFetchedAll = data.all || [];
@@ -3293,6 +3293,25 @@ async function loadProviders(){
         setStatus(tr('api.loadFailed'));
     }
 }
+// 读取失败响应的错误信息：服务端 500 可能返回纯文本（Internal Server Error），
+// 直接 res.json() 会抛 "Unexpected token 'I'..." 这种看不懂的解析错误，
+// 这里统一降级成「HTTP 状态码 + 原文片段」，保证错误可读。
+async function readErrorDetail(res, fallback){
+    const raw = await res.text().catch(() => '');
+    if(raw){
+        try {
+            const data = JSON.parse(raw);
+            const detail = data && (data.detail || data.message || data.error);
+            if(detail){
+                if(typeof detail === 'string') return detail;
+                if(Array.isArray(detail)) return detail.map(item => item?.msg || JSON.stringify(item)).join('；');
+                return JSON.stringify(detail);
+            }
+        } catch(_) { /* 非 JSON 响应体，按原文处理 */ }
+        return `HTTP ${res.status}：${raw.slice(0, 300)}`;
+    }
+    return fallback || `HTTP ${res.status}`;
+}
 async function saveProviders(){
     syncEditor();
     providers.forEach(item => {
@@ -3378,7 +3397,7 @@ async function saveProviders(){
                 clear_volcengine_secret_access_key:item._clearVolcengineSecretKey === true
             })))
         });
-        if(!res.ok) throw new Error((await res.json()).detail || tr('api.saveFailed'));
+        if(!res.ok) throw new Error(await readErrorDetail(res, tr('api.saveFailed')));
         const data = await res.json();
         providers = data.providers || providers;
         providers.forEach(item => {

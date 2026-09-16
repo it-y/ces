@@ -9,7 +9,10 @@ from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import FileResponse
-from .models import UpdateRequest, RollbackRequest, TokenRequest, ApiProviderPayload
+from .models import (
+    UpdateRequest, RollbackRequest, TokenRequest,
+    ApiProviderPayload, CLEAR_FLAG_FIELDS,
+)
 from .providers import (
     load_providers, save_providers, get_provider,
     public_provider, mask_secret, provider_api_key,
